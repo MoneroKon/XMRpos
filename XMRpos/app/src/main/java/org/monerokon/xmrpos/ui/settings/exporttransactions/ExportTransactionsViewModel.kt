@@ -55,11 +55,11 @@ class ExportTransactionsViewModel @Inject constructor(
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 OutputStreamWriter(outputStream).use { writer ->
                     // Write CSV headers
-                    writer.append("txId,xmrAmount,fiatValue,timestamp\n")
+                    writer.append("Koinly Date,Amount,Currency,Label,TxHash\n")
 
                     // Write CSV rows
                     data.forEach { entity ->
-                        writer.append("${entity.txId},${entity.xmrAmount},${entity.fiatValue},${entity.timestamp}\n")
+                        writer.append("${entity.timestamp},${entity.xmrAmount},XMR,${entity.txId}\n")
                     }
                 }
             }
