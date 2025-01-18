@@ -59,7 +59,7 @@ class ExportTransactionsViewModel @Inject constructor(
 
                     // Write CSV rows
                     data.forEach { entity ->
-                        writer.append("${entity.timestamp},${entity.xmrAmount},XMR,${entity.txId}\n")
+                        writer.append("${entity.timestamp},${entity.xmrAmount},XMR,income,${entity.txId}\n")
                     }
                 }
             }
