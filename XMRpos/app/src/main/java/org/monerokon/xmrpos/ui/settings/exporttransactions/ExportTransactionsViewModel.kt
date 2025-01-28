@@ -59,7 +59,9 @@ class ExportTransactionsViewModel @Inject constructor(
 
                     // Write CSV rows
                     data.forEach { entity ->
-                        writer.append("${entity.timestamp},${entity.xmrAmount},XMR,income,${entity.txId}\n")
+                        // Format xmrAmount to 12 decimal places
+                        val formattedAmount = String.format("%.12f", entity.xmrAmount)
+                        writer.append("${entity.timestamp},$formattedAmount,XMR,income,${entity.txId}\n")
                     }
                 }
             }
