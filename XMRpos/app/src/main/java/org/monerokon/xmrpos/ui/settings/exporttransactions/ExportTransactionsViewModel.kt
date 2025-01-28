@@ -61,7 +61,12 @@ class ExportTransactionsViewModel @Inject constructor(
                     data.forEach { entity ->
                         // Format xmrAmount to 12 decimal places
                         val formattedAmount = String.format("%.12f", entity.xmrAmount)
-                        writer.append("${entity.timestamp},$formattedAmount,XMR,income,${entity.txId}\n")
+                        // Format timestamp to Koinly Date
+                        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.getDefault())
+                        val date = inputFormat.parse(entity.timestamp)
+                        val formattedDate = outputFormat.format(date)
+                        writer.append("$formattedDate,$formattedAmount,XMR,income,${entity.txId}\n")
                     }
                 }
             }
