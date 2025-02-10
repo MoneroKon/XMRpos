@@ -81,7 +81,7 @@ fun ExportTransactionsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text("Press the button below to export all transactions to a CSV file.")
             FilledTonalButton(onClick = {createDocumentLauncher.launch("database_export.csv")}) {
-                Text("Export as CSV")
+                Text("Export as CSV in Koinly format")
             }
             Spacer(modifier = Modifier.height(32.dp))
             Text("Delete all the transactions saved on this device.")

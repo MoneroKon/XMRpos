@@ -3,6 +3,7 @@ agp = "8.7.2"
 converterGson = "2.9.0"
 core = "3.4.1"
 datastorePreferences = "1.1.1"
+escposThermalprinterAndroid = "3.3.0"
 hiltAndroid = "2.51.1"
 hiltNavigationCompose = "1.2.0"
 kotlin = "2.0.21"
@@ -31,6 +32,7 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-ui-text-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
 core = { module = "com.google.zxing:core", version.ref = "core" }
+escpos-thermalprinter-android = { module = "com.github.DantSu:ESCPOS-ThermalPrinter-Android", version.ref = "escposThermalprinterAndroid" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }

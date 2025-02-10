@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-feature android:name="android.hardware.nfc.hce" android:required="true" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-feature android:name="android.hardware.usb.host" />
     <application
         android:name=".MyApp"
         android:allowBackup="true"
@@ -31,16 +35,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".data.hce.HceServiceManager" android:exported="true"
-            android:permission="android.permission.BIND_NFC_SERVICE">
-            <intent-filter>
-                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE"/>
-            </intent-filter>
-            <meta-data android:name="android.nfc.cardemulation.host_apdu_service"
-                android:resource="@xml/apduservice"/>
-        </service>
     </application>
-    <queries>
-        <package android:name="net.nyx.printerservice"/>
-    </queries>
 </manifest>

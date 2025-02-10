@@ -41,6 +41,8 @@ import org.monerokon.xmrpos.ui.settings.moneropay.MoneroPayScreenRoot
 import org.monerokon.xmrpos.ui.settings.moneropay.MoneroPayViewModel
 import org.monerokon.xmrpos.ui.settings.moneropay.SecurityScreenRoot
 import org.monerokon.xmrpos.ui.settings.moneropay.SecurityViewModel
+import org.monerokon.xmrpos.ui.settings.printersettings.PrinterSettingsScreenRoot
+import org.monerokon.xmrpos.ui.settings.printersettings.PrinterSettingsViewModel
 
 @Composable
 fun NavGraphRoot(
@@ -75,7 +77,7 @@ fun NavGraphRoot(
                 composable<PaymentSuccess> {
                     val args = it.toRoute<PaymentSuccess>()
                     val paymentSuccessViewModel: PaymentSuccessViewModel = hiltViewModel()
-                    PaymentSuccessScreenRoot(viewModel = paymentSuccessViewModel, navController = navController, fiatAmount = args.fiatAmount, primaryFiatCurrency = args.primaryFiatCurrency, txId = args.txId, xmrAmount = args.xmrAmount, exchangeRate = args.exchangeRate, timestamp = args.timestamp)
+                    PaymentSuccessScreenRoot(viewModel = paymentSuccessViewModel, navController = navController, fiatAmount = args.fiatAmount, primaryFiatCurrency = args.primaryFiatCurrency, txId = args.txId, xmrAmount = args.xmrAmount, exchangeRate = args.exchangeRate, timestamp = args.timestamp, showPrintReceipt = args.showPrintReceipt)
                 }
                 composable<Settings> {
                     val mainSettingsViewModel: MainSettingsViewModel = viewModel()
@@ -101,6 +103,10 @@ fun NavGraphRoot(
                     val moneroPayViewModel: MoneroPayViewModel = hiltViewModel()
                     MoneroPayScreenRoot(viewModel = moneroPayViewModel, navController = navController)
                 }
+                composable<PrinterSettings> {
+                    val printerSettingsViewModel: PrinterSettingsViewModel = hiltViewModel()
+                    PrinterSettingsScreenRoot(viewModel = printerSettingsViewModel, navController = navController)
+                }
             }
         }
 
@@ -124,6 +130,7 @@ data class PaymentSuccess(
     val xmrAmount: Double,
     val exchangeRate: Double,
     val timestamp: String,
+    val showPrintReceipt: Boolean,
 )
 
 // Settings routes
@@ -145,3 +152,6 @@ object ExportTransactions
 
 @Serializable
 object MoneroPay
+
+@Serializable
+object PrinterSettings

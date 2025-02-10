@@ -1,104 +1,141 @@
 package org.monerokon.xmrpos.data.printer
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.IBinder
+import android.hardware.usb.UsbManager
 import android.util.Log
-import net.nyx.printerservice.print.IPrinterService
-import net.nyx.printerservice.print.PrintTextFormat
+import com.dantsu.escposprinter.EscPosCharsetEncoding
+import com.dantsu.escposprinter.EscPosPrinter
+import com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections
+import com.dantsu.escposprinter.connection.tcp.TcpConnection
+import com.dantsu.escposprinter.connection.usb.UsbConnection
+import com.dantsu.escposprinter.connection.usb.UsbPrintersConnections
+import com.dantsu.escposprinter.textparser.PrinterTextParserImg
+import kotlinx.coroutines.flow.first
+import org.monerokon.xmrpos.data.repository.DataStoreRepository
 import java.io.File
 
-class PrinterServiceManager(private val context: Context) {
+class PrinterServiceManager(private val context: Context, private val dataStoreRepository: DataStoreRepository) {
 
-    private var printerService: IPrinterService? = null
+    var printer: EscPosPrinter? = null
 
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            printerService = IPrinterService.Stub.asInterface(service)
+    var printFormattedString: String? = ""
+
+    var nbrCharactersPerLine: Int? = null
+
+    var lastConfig = ""
+
+    suspend fun updateEscPosPrinter(): Boolean {
+        printFormattedString = ""
+        val newPrinterType = dataStoreRepository.getPrinterConnectionType().first()
+        val newPrinterDpi = dataStoreRepository.getPrinterDpi().first()
+        val newPrinterWidth = dataStoreRepository.getPrinterWidth().first()
+        val newPrinterNbrCharactersPerLine = dataStoreRepository.getPrinterNbrCharactersPerLine().first()
+        nbrCharactersPerLine = newPrinterNbrCharactersPerLine
+        val newPrinterCharsetEncoding = dataStoreRepository.getPrinterCharsetEncoding().first()
+        val newPrinterCharsetId = dataStoreRepository.getPrinterCharsetId().first()
+        val newPrinterAddress = dataStoreRepository.getPrinterAddress().first()
+        val newPrinterPort = dataStoreRepository.getPrinterPort().first()
+
+        val newConfig = newPrinterType + newPrinterDpi + newPrinterWidth + newPrinterNbrCharactersPerLine + newPrinterCharsetEncoding + newPrinterCharsetId + newPrinterAddress + newPrinterPort
+
+        if (lastConfig == newConfig) {
+            Log.i("PrinterServiceManager", "Printer configuration is the same as last time")
+            return true
         }
 
-        override fun onServiceDisconnected(name: ComponentName?) {
-            printerService = null
+        // Bluetooth
+        if (newPrinterType == "bluetooth") {
+            printer = EscPosPrinter(
+                BluetoothPrintersConnections.selectFirstPaired(),
+                newPrinterDpi,
+                newPrinterWidth.toFloat(),
+                newPrinterNbrCharactersPerLine,
+                EscPosCharsetEncoding(newPrinterCharsetEncoding, newPrinterCharsetId)
+            )
+            lastConfig = newPrinterType + newPrinterDpi + newPrinterWidth + newPrinterNbrCharactersPerLine + newPrinterCharsetEncoding + newPrinterCharsetId + newPrinterAddress + newPrinterPort
+            return true;
         }
-    }
 
-    fun bindPrinterService() {
-        val intent = Intent().apply {
-            setPackage("net.nyx.printerservice")
-            action = "net.nyx.printerservice.IPrinterService"
+        // TCP/IP
+        if (newPrinterType == "tcp/ip") {
+            printer = EscPosPrinter(
+                TcpConnection(newPrinterAddress, newPrinterPort),
+                newPrinterDpi,
+                newPrinterWidth.toFloat(),
+                newPrinterNbrCharactersPerLine,
+                EscPosCharsetEncoding(newPrinterCharsetEncoding, newPrinterCharsetId)
+            )
+            lastConfig = newPrinterType + newPrinterDpi + newPrinterWidth + newPrinterNbrCharactersPerLine + newPrinterCharsetEncoding + newPrinterCharsetId + newPrinterAddress + newPrinterPort
+            return true;
         }
-        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-    }
 
-    fun unbindPrinterService() {
-        context.unbindService(serviceConnection)
-    }
+        // USB
+        if (newPrinterType == "usb") {
+            val usbConnection: UsbConnection? = UsbPrintersConnections.selectFirstConnected(context)
+            val usbManager: UsbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
-    fun printText(text: String) {
-        printerService?.let {
-            val format = PrintTextFormat()
-            // Set formatting options for text here (optional)
-            it.printText(text, format)
-        } ?: run {
-            Log.e("PrinterServiceManager", "Printer Service not connected")
+            val device = usbConnection?.device
+
+            printer = EscPosPrinter(
+                UsbConnection(usbManager, device),
+                newPrinterDpi,
+                newPrinterWidth.toFloat(),
+                newPrinterNbrCharactersPerLine,
+                EscPosCharsetEncoding(newPrinterCharsetEncoding, newPrinterCharsetId)
+            )
+            lastConfig = newPrinterType + newPrinterDpi + newPrinterWidth + newPrinterNbrCharactersPerLine + newPrinterCharsetEncoding + newPrinterCharsetId + newPrinterAddress + newPrinterPort
+            return true;
         }
-    }
 
-    fun printTextCenter(text: String) {
-        printerService?.let {
-            val format = PrintTextFormat().apply {
-                ali = 1
-            }
-            it.printText(text, format)
-        } ?: run {
-            Log.e("PrinterServiceManager", "Printer Service not connected")
-        }
-    }
-
-    fun printSpace() {
-        printerService?.let {
-            val format = PrintTextFormat().apply {
-                topPadding = 10
-            }
-            it.printText("", format)
-        } ?: run {
-            Log.e("PrinterServiceManager", "Printer Service not connected")
-        }
-    }
-
-    fun printSpacer() {
-        printerService?.let {
-            val format = PrintTextFormat().apply {
-                ali = 1
-                topPadding = 5
-            }
-            it.printText("------------------------------------------------", format)
-        } ?: run {
-            Log.e("PrinterServiceManager", "Printer Service not connected")
-        }
+        return false
     }
 
     fun printEnd() {
-        printerService?.printEndAutoOut() ?: run {
-            Log.e("PrinterServiceManager", "Printer Service not connected")
-        }
+        printFormattedString?.removeSuffix("\n")
+        printer?.printFormattedTextAndCut(printFormattedString, 5f)
+        printFormattedString = ""
+    }
+
+    fun printText(text: String) {
+        printFormattedString += "[L]$text\n"
+    }
+
+    fun printTextCenter(text: String) {
+        printFormattedString += "[C]$text\n"
+    }
+
+    fun printSpacer() {
+        val spacer = "-".repeat(nbrCharactersPerLine ?: 30)
+        printFormattedString += "[C]$spacer\n"
     }
 
     fun printPicture(picture: File) {
-        printerService?.let {
-            val bitmap = BitmapFactory.decodeFile(picture.absolutePath)
-            val scaledBitmap = scaleBitmapToMaxSize(bitmap)
-            // make bitmap fit 1/4 with of paper
-            it.printBitmap(scaledBitmap, 1, 1)
-        } ?: run {
-            Log.e("PrinterServiceManager", "Printer Service not connected")
-        }
+        Log.i("PrinterServiceManager", "Printing picture: ${picture.absolutePath}")
+        val bitmap = BitmapFactory.decodeFile(picture.absolutePath)
+
+        val scaledBitmap = scaleBitmapToMaxSize(bitmap)
+
+        val finalBitmap = bitmapTransparentToWhite(scaledBitmap)
+
+        printFormattedString += "[C]<img>${PrinterTextParserImg.bitmapToHexadecimalString(printer, finalBitmap)}</img>\n"
+
+        Log.i("PrinterServiceManager", "Printing picture done")
     }
 
+    private fun bitmapTransparentToWhite(bitmap: Bitmap): Bitmap {
+        val newBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        for (x in 0 until newBitmap.width) {
+            for (y in 0 until newBitmap.height) {
+                val pixel = newBitmap.getPixel(x, y)
+                if (pixel == 0) {
+                    newBitmap.setPixel(x, y, -1)
+                }
+            }
+        }
+        return newBitmap
+    }
     private fun scaleBitmapToMaxSize(bitmap: Bitmap, maxWidth: Int = 160, maxHeight: Int = 80): Bitmap {
         // Calculate the aspect ratio
         val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
@@ -131,4 +168,5 @@ class PrinterServiceManager(private val context: Context) {
         // Create and return the scaled bitmap
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, false)
     }
+
 }

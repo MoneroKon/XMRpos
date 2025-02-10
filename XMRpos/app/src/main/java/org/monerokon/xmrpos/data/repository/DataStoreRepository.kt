@@ -110,4 +110,68 @@ class DataStoreRepository @Inject constructor(
         dataStoreLocalDataSource.saveMoneroPayRequestInterval(moneroPayRequestInterval)
     }
 
+    fun getPrinterConnectionType(): Flow<String> {
+        return dataStoreLocalDataSource.getPrinterConnectionType()
+    }
+
+    suspend fun savePrinterConnectionType(printerConnectionType: String) {
+        dataStoreLocalDataSource.savePrinterConnectionType(printerConnectionType)
+    }
+
+    fun getPrinterDpi(): Flow<Int> {
+        return dataStoreLocalDataSource.getPrinterDpi()
+    }
+
+    suspend fun savePrinterDpi(printerDpi: Int) {
+        dataStoreLocalDataSource.savePrinterDpi(printerDpi)
+    }
+
+    fun getPrinterWidth(): Flow<Int> {
+        return dataStoreLocalDataSource.getPrinterWidth()
+    }
+
+    suspend fun savePrinterWidth(printerWidth: Int) {
+        dataStoreLocalDataSource.savePrinterWidth(printerWidth)
+    }
+
+    fun getPrinterNbrCharactersPerLine(): Flow<Int> {
+        return dataStoreLocalDataSource.getPrinterNbrCharactersPerLine()
+    }
+
+    suspend fun savePrinterNbrCharactersPerLine(printerNbrCharactersPerLine: Int) {
+        dataStoreLocalDataSource.savePrinterNbrCharactersPerLine(printerNbrCharactersPerLine)
+    }
+
+    fun getPrinterCharsetEncoding(): Flow<String> {
+        return dataStoreLocalDataSource.getPrinterCharsetEncoding()
+    }
+
+    suspend fun savePrinterCharsetEncoding(printerCharsetEncoding: String) {
+        dataStoreLocalDataSource.savePrinterCharsetEncoding(printerCharsetEncoding)
+    }
+
+    fun getPrinterCharsetId(): Flow<Int> {
+        return dataStoreLocalDataSource.getPrinterCharsetId()
+    }
+
+    suspend fun savePrinterCharsetId(printerCharsetId: Int) {
+        dataStoreLocalDataSource.savePrinterCharsetId(printerCharsetId)
+    }
+
+    fun getPrinterAddress(): Flow<String> {
+        return dataStoreLocalDataSource.getPrinterAddress()
+    }
+
+    suspend fun savePrinterAddress(printerAddress: String) {
+        dataStoreLocalDataSource.savePrinterAddress(printerAddress)
+    }
+
+    fun getPrinterPort(): Flow<Int> {
+        return dataStoreLocalDataSource.getPrinterPort()
+    }
+
+    suspend fun savePrinterPort(printerPort: Int) {
+        dataStoreLocalDataSource.savePrinterPort(printerPort)
+    }
+
 }

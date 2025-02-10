@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayReceiveRequest
+import org.monerokon.xmrpos.data.repository.DataStoreRepository
 import org.monerokon.xmrpos.data.repository.ExchangeRateRepository
 import org.monerokon.xmrpos.data.repository.HceRepository
 import org.monerokon.xmrpos.data.repository.MoneroPayRepository
@@ -34,6 +35,7 @@ class PaymentCheckoutViewModel @Inject constructor(
     private val exchangeRateRepository: ExchangeRateRepository,
     private val moneroPayRepository: MoneroPayRepository,
     private val hceRepository: HceRepository,
+    private val dataStoreRepository: DataStoreRepository,
 ) : ViewModel() {
 
     private val logTag = "PaymentCheckoutViewModel"
@@ -141,7 +143,8 @@ class PaymentCheckoutViewModel @Inject constructor(
                         txId = it.transaction.tx_hash,
                         xmrAmount = it.amount.covered.total / 10.0.pow(12),
                         exchangeRate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0,
-                        timestamp = it.transaction.timestamp
+                        timestamp = it.transaction.timestamp,
+                        showPrintReceipt = dataStoreRepository.getPrinterConnectionType().first() != "none"
                     ))
                 }
             }

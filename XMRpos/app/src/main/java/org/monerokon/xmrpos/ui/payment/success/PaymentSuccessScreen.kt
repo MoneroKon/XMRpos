@@ -1,6 +1,9 @@
 // PaymentSuccessScreen.kt
 package org.monerokon.xmrpos.ui.payment.success
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +20,7 @@ import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.ui.PaymentSuccess
 
 @Composable
-fun PaymentSuccessScreenRoot(viewModel: PaymentSuccessViewModel, navController: NavHostController, fiatAmount: Double, primaryFiatCurrency: String, txId: String, xmrAmount: Double, exchangeRate: Double, timestamp: String) {
+fun PaymentSuccessScreenRoot(viewModel: PaymentSuccessViewModel, navController: NavHostController, fiatAmount: Double, primaryFiatCurrency: String, txId: String, xmrAmount: Double, exchangeRate: Double, timestamp: String, showPrintReceipt: Boolean) {
     viewModel.setNavController(navController)
     PaymentSuccessScreen(
         navigateToEntry = viewModel::navigateToEntry,
@@ -27,7 +30,9 @@ fun PaymentSuccessScreenRoot(viewModel: PaymentSuccessViewModel, navController: 
         txId = txId,
         xmrAmount = xmrAmount,
         exchangeRate = exchangeRate,
-        timestamp = timestamp
+        timestamp = timestamp,
+        showPrintReceipt = showPrintReceipt,
+        printingInProgress = viewModel.printingInProgress
     )
 }
 
@@ -40,7 +45,9 @@ fun PaymentSuccessScreen(
     txId: String,
     xmrAmount: Double,
     exchangeRate: Double,
-    timestamp: String
+    timestamp: String,
+    showPrintReceipt: Boolean,
+    printingInProgress: Boolean
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column (
@@ -72,16 +79,32 @@ fun PaymentSuccessScreen(
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
-            FilledTonalButton(
-                onClick = {printReceipt(PaymentSuccess(
-                    fiatAmount = fiatAmount,
-                    primaryFiatCurrency = primaryFiatCurrency,
-                    txId = txId,
-                    xmrAmount = xmrAmount,
-                    exchangeRate = exchangeRate,
-                    timestamp = timestamp
-                ))}
-            ) {Text("Print receipt")}
+            if (showPrintReceipt) {
+                FilledTonalButton(
+                    onClick = {printReceipt(PaymentSuccess(
+                        fiatAmount = fiatAmount,
+                        primaryFiatCurrency = primaryFiatCurrency,
+                        txId = txId,
+                        xmrAmount = xmrAmount,
+                        exchangeRate = exchangeRate,
+                        timestamp = timestamp,
+                        showPrintReceipt = showPrintReceipt
+                    ))}
+                ) {
+                    Text("Print receipt")
+                    AnimatedVisibility(
+                        visible = printingInProgress,
+                        enter = fadeIn() + slideInHorizontally(initialOffsetX = { -it })
+                    ) {
+                        Row {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(32.dp))
             ElevatedButton(
                 onClick = {navigateToEntry()}

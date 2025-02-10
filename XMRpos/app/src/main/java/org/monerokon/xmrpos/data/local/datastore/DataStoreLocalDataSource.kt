@@ -8,6 +8,14 @@ import MONERO_PAY_SERVER_ADDRESS
 import PIN_CODE_ON_APP_START
 import PIN_CODE_OPEN_SETTINGS
 import PRIMARY_FIAT_CURRENCY
+import PRINTER_ADDRESS
+import PRINTER_CHARSET_ENCODING
+import PRINTER_CHARSET_ID
+import PRINTER_CONNECTION_TYPE
+import PRINTER_DPI
+import PRINTER_NBR_CHARACTERS_PER_LINE
+import PRINTER_PORT
+import PRINTER_WIDTH
 import RECEIPT_FOOTER
 import REFERENCE_FIAT_CURRENCIES
 import REQUIRE_PIN_CODE_ON_APP_START
@@ -189,6 +197,110 @@ class DataStoreLocalDataSource @Inject constructor(
     suspend fun saveMoneroPayRequestInterval(moneroPayRequestInterval: Int) {
         context.dataStore.edit { preferences ->
             preferences[MONERO_PAY_REFRESH_INTERVAL] = moneroPayRequestInterval
+        }
+    }
+
+    fun getPrinterConnectionType(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_CONNECTION_TYPE] ?: "none"
+            }
+    }
+
+    suspend fun savePrinterConnectionType(printerConnectionType: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_CONNECTION_TYPE] = printerConnectionType
+        }
+    }
+
+    fun getPrinterDpi(): Flow<Int> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_DPI] ?: 203
+            }
+    }
+
+    suspend fun savePrinterDpi(printerDpi: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_DPI] = printerDpi
+        }
+    }
+
+    fun getPrinterWidth(): Flow<Int> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_WIDTH] ?: 48
+            }
+    }
+
+    suspend fun savePrinterWidth(printerWidth: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_WIDTH] = printerWidth
+        }
+    }
+
+    fun getPrinterNbrCharactersPerLine(): Flow<Int> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_NBR_CHARACTERS_PER_LINE] ?: 30
+            }
+    }
+
+    suspend fun savePrinterNbrCharactersPerLine(printerNbrCharactersPerLine: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_NBR_CHARACTERS_PER_LINE] = printerNbrCharactersPerLine
+        }
+    }
+
+    fun getPrinterCharsetEncoding(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_CHARSET_ENCODING] ?: "UTF-8"
+            }
+    }
+
+    suspend fun savePrinterCharsetEncoding(printerCharsetEncoding: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_CHARSET_ENCODING] = printerCharsetEncoding
+        }
+    }
+
+    fun getPrinterCharsetId(): Flow<Int> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_CHARSET_ID] ?: 16
+            }
+    }
+
+    suspend fun savePrinterCharsetId(printerCharsetId: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_CHARSET_ID] = printerCharsetId
+        }
+    }
+
+    fun getPrinterAddress(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_ADDRESS] ?: ""
+            }
+    }
+
+    suspend fun savePrinterAddress(printerAddress: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_ADDRESS] = printerAddress
+        }
+    }
+
+    fun getPrinterPort(): Flow<Int> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRINTER_PORT] ?: 9100
+            }
+    }
+
+    suspend fun savePrinterPort(printerPort: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_PORT] = printerPort
         }
     }
 

@@ -1,5 +1,6 @@
 package org.monerokon.xmrpos.data.repository
 
+import android.util.Log
 import kotlinx.coroutines.flow.first
 import org.monerokon.xmrpos.data.printer.PrinterServiceManager
 import org.monerokon.xmrpos.ui.PaymentSuccess
@@ -10,15 +11,12 @@ class PrinterRepository(private val printerServiceManager: PrinterServiceManager
     private val dataStoreRepository: DataStoreRepository,
     private val storageRepository: StorageRepository) {
 
-    fun bindPrinterService() {
-        printerServiceManager.bindPrinterService()
-    }
-
-    fun unbindPrinterService() {
-        printerServiceManager.unbindPrinterService()
-    }
-
     suspend fun printReceipt(paymentSuccess: PaymentSuccess) {
+        val success = printerServiceManager.updateEscPosPrinter()
+        Log.i("PrinterRepository", "updateEscPosPrinter: $success")
+        if (!success) {
+            return
+        }
         val companyLogo = storageRepository.readImage("logo.png")
         if (companyLogo != null) {
             printerServiceManager.printPicture(companyLogo)

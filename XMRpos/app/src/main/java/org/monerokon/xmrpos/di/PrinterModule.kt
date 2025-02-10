@@ -24,7 +24,7 @@ object PrinterModule {
 
     @Provides
     @Singleton
-    fun providePrinterServiceManager(@ApplicationContext context: Context): PrinterServiceManager {
-        return PrinterServiceManager(context)
+    fun providePrinterServiceManager(@ApplicationContext applicationContext: Context, dataStoreRepository: DataStoreRepository): PrinterServiceManager {
+        return PrinterServiceManager(applicationContext, dataStoreRepository)
     }
 }

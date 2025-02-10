@@ -1,6 +1,8 @@
-// PaymentSuccessViewModel.kt
 package org.monerokon.xmrpos.ui.payment.success
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
@@ -16,15 +18,6 @@ class PaymentSuccessViewModel @Inject constructor(
     private val printerRepository: PrinterRepository,
 ) : ViewModel() {
 
-    init {
-        printerRepository.bindPrinterService()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        printerRepository.unbindPrinterService()
-    }
-
     private var navController: NavHostController? = null
 
     fun setNavController(navController: NavHostController) {
@@ -35,9 +28,13 @@ class PaymentSuccessViewModel @Inject constructor(
         navController?.navigate(PaymentEntry)
     }
 
+    var printingInProgress by mutableStateOf(false)
+
     fun printReceipt(paymentSuccess: PaymentSuccess) {
+        printingInProgress = true
         viewModelScope.launch {
             printerRepository.printReceipt(paymentSuccess)
+            printingInProgress = false
         }
     }
 }

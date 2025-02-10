@@ -16,6 +16,12 @@ When running XMRpos for the first time you need to at least configure the Monero
 2. Tap on MoneroPay
 3. Change the MoneroPay address to the one you want to use.
 
+If your device has a printer you have to configure it like this:
+1. Tap on settings icon on the top right corner
+2. Tap on printer settings
+3. Select the printer connection that your printer uses (NOTE: only Bluetooth is tested right now)
+4. Adjust the printer parameters if necessary 
+
 ## Taking payments
 The payment flow is a 3 step process. 
 1. Enter the amount in the `primaryFiatCurrency` and press the green button
@@ -52,6 +58,13 @@ Here you enter the server address for your MoneroPay instance.
 You can also choose to change the request interval which is how often the app will manually check the MoneroPay instance to look for changes instead of waiting for a callback
 
 The number of required confirmations can also be changed here (0-conf, 1-conf or 10-conf)
+
+### Printer settings
+Here you can choose the printer connection type of your printer (NOTE: Only Bluetooth is tested)
+
+There are many parameters here that are changeable if your printer does not work out of the box.
+
+The print test button prints a receipt the same way as it would be printed after a transaction, but with static values.
 
 
 # Building XMRpos from source

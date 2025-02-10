@@ -55,11 +55,18 @@ class ExportTransactionsViewModel @Inject constructor(
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 OutputStreamWriter(outputStream).use { writer ->
                     // Write CSV headers
-                    writer.append("txId,xmrAmount,fiatValue,timestamp\n")
+                    writer.append("Koinly Date,Amount,Currency,Label,TxHash\n")
 
                     // Write CSV rows
                     data.forEach { entity ->
-                        writer.append("${entity.txId},${entity.xmrAmount},${entity.fiatValue},${entity.timestamp}\n")
+                        // Format xmrAmount to 12 decimal places
+                        val formattedAmount = String.format("%.12f", entity.xmrAmount)
+                        // Format timestamp to Koinly Date
+                        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.getDefault())
+                        val date = inputFormat.parse(entity.timestamp)
+                        val formattedDate = outputFormat.format(date)
+                        writer.append("$formattedDate,$formattedAmount,XMR,income,${entity.txId}\n")
                     }
                 }
             }
