@@ -68,3 +68,30 @@ func (s *VendorService) CreateVendor(name string, password string, inviteCode st
 
 	return nil
 }
+
+func (s *VendorService) DeleteVendor(vendorID uint) error {
+	vendor, err := s.repo.GetVendorByID(vendorID)
+	if err != nil {
+		return err
+	}
+
+	if vendor == nil {
+		return errors.New("vendor not found")
+	}
+
+	if vendor.Balance != 0 {
+		return errors.New("vendor balance must be 0 to delete vendor")
+	}
+
+	err = s.repo.DeleteAllPOSForVendor(vendorID)
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.DeleteAllTransactionsForVendor(vendorID)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.DeleteVendor(vendorID)
+}

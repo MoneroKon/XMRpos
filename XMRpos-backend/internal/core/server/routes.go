@@ -51,6 +51,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 		// Admin routes
 		r.Post("/admin/invite", adminHandler.CreateInvite)
 
+		// Vendor routes
+		r.Post("/vendor/delete", vendorHandler.DeleteVendor)
+
 		/* r.Post("/auth/update-password", authHandler.UpdatePassword) */
 
 		/* // Device management

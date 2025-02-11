@@ -10,6 +10,10 @@ type VendorRepository interface {
 	FindInviteByCode(inviteCode string) (*models.Invite, error)
 	CreateVendor(vendor *models.Vendor) error
 	SetInviteToUsed(inviteID uint) error
+	GetVendorByID(vendorID uint) (*models.Vendor, error)
+	DeleteVendor(vendorID uint) error
+	DeleteAllTransactionsForVendor(vendorID uint) error
+	DeleteAllPOSForVendor(vendorID uint) error
 }
 
 type vendorRepository struct {
@@ -45,4 +49,24 @@ func (r *vendorRepository) CreateVendor(vendor *models.Vendor) error {
 
 func (r *vendorRepository) SetInviteToUsed(inviteID uint) error {
 	return r.db.Model(&models.Invite{}).Where("id = ?", inviteID).Update("used", true).Error
+}
+
+func (r *vendorRepository) GetVendorByID(vendorID uint) (*models.Vendor, error) {
+	var vendor models.Vendor
+	if err := r.db.First(&vendor, vendorID).Error; err != nil {
+		return nil, err
+	}
+	return &vendor, nil
+}
+
+func (r *vendorRepository) DeleteVendor(vendorID uint) error {
+	return r.db.Delete(&models.Vendor{}, vendorID).Error
+}
+
+func (r *vendorRepository) DeleteAllTransactionsForVendor(vendorID uint) error {
+	return r.db.Where("vendor_id = ?", vendorID).Delete(&models.Transaction{}).Error
+}
+
+func (r *vendorRepository) DeleteAllPOSForVendor(vendorID uint) error {
+	return r.db.Where("vendor_id = ?", vendorID).Delete(&models.POS{}).Error
 }
