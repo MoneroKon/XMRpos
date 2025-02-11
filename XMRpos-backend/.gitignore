@@ -9,9 +9,6 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Go workspace file
-go.work
-
 # IDE and editor specific files
 .vscode/
 .idea/
