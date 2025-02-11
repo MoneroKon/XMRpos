@@ -1,0 +1,23 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IDE and editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# Logs
+*.log
+
+# Configuration files with sensitive information
+.env
