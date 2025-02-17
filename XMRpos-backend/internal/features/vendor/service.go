@@ -99,3 +99,52 @@ func (s *VendorService) DeleteVendor(vendorID uint) error {
 
 	return s.repo.DeleteVendor(vendorID)
 }
+
+func (s *VendorService) CreatePOS(name string, password string, vendorID uint) (err error) {
+
+	if len(name) < 3 || len(name) > 50 {
+		return errors.New("name must be at least 3 characters and no more than 50 characters")
+	}
+
+	if len(password) < 8 || len(password) > 50 {
+		return errors.New("password must be at least 8 characters and no more than 50 characters")
+	}
+
+	nameTaken, err := s.repo.POSByNameExistsForVendor(name, vendorID)
+
+	if err != nil {
+		return errors.New("error checking if POS name exists: " + err.Error())
+	}
+
+	if nameTaken {
+		return errors.New("POS name already taken")
+	}
+
+	// check to see if vendor still exists. This is to prevent POS creation on deleted vendor, but probably needs to be done in a better way
+	vendor, err := s.repo.GetVendorByID(vendorID)
+	if err != nil {
+		return errors.New("error retrieving vendor: " + err.Error())
+	}
+
+	if vendor == nil {
+		return errors.New("vendor not found")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	pos := &models.POS{
+		Name:         name,
+		PasswordHash: string(hashedPassword),
+		VendorID:     vendorID,
+	}
+
+	err = s.repo.CreatePOS(pos)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

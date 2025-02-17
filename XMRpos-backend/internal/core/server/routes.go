@@ -53,6 +53,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 
 		// Vendor routes
 		r.Post("/vendor/delete", vendorHandler.DeleteVendor)
+		r.Post("/vendor/create-pos", vendorHandler.CreatePOS)
 
 		/* r.Post("/auth/update-password", authHandler.UpdatePassword) */
 

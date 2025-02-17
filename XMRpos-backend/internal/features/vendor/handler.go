@@ -65,3 +65,40 @@ func (h *VendorHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
+
+type createPOSRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+func (h *VendorHandler) CreatePOS(w http.ResponseWriter, r *http.Request) {
+	var req createPOSRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "vendor" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vendorID, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsVendorIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized: vendorID not found", http.StatusUnauthorized)
+		return
+	}
+
+	err := h.service.CreatePOS(req.Name, req.Password, *(vendorID.(*uint)))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := "POS created successfully"
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
