@@ -17,7 +17,7 @@ func NewAdminService(repo AdminRepository, cfg *config.Config) *AdminService {
 	return &AdminService{repo: repo, config: cfg}
 }
 
-func (s *AdminService) CreateInvite(validUntil time.Time) (inviteCode string, err error) {
+func (s *AdminService) CreateInvite(validUntil time.Time, forcedName *string) (inviteCode string, err error) {
 	inviteCode, err = gonanoid.New()
 
 	if err != nil {
@@ -27,6 +27,7 @@ func (s *AdminService) CreateInvite(validUntil time.Time) (inviteCode string, er
 	invite := &models.Invite{
 		Used:       false,
 		InviteCode: inviteCode,
+		ForcedName: forcedName,
 		ValidUntil: validUntil,
 	}
 

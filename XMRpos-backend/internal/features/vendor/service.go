@@ -46,6 +46,10 @@ func (s *VendorService) CreateVendor(name string, password string, inviteCode st
 		return errors.New("invite code already used")
 	}
 
+	if invite.ForcedName != nil && *invite.ForcedName != name {
+		return errors.New("invite code is for a different name")
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err

@@ -18,7 +18,8 @@ func NewAdminHandler(service *AdminService) *AdminHandler {
 }
 
 type createInviteRequest struct {
-	ValidUntil int64 `json:"valid_until"`
+	ValidUntil int64   `json:"valid_until"`
+	ForcedName *string `json:"forced_name"`
 }
 
 type createInviteResponse struct {
@@ -41,7 +42,7 @@ func (h *AdminHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	inviteCode, err := h.service.CreateInvite(time.Unix(req.ValidUntil, 0))
+	inviteCode, err := h.service.CreateInvite(time.Unix(req.ValidUntil, 0), req.ForcedName)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
