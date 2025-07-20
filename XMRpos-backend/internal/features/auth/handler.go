@@ -3,7 +3,10 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
-)
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
+	/* "github.com/monerokon/xmrpos/xmrpos-backend/internal/core/utils" */)
 
 type AuthHandler struct {
 	service *AuthService
@@ -18,7 +21,7 @@ type loginVendorRequest struct {
 	Password string `json:"password"`
 }
 
-type loginPOSRequest struct {
+type loginPosRequest struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
 	VendorID uint   `json:"vendor_id"`
@@ -73,14 +76,14 @@ func (h *AuthHandler) LoginVendor(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (h *AuthHandler) LoginPOS(w http.ResponseWriter, r *http.Request) {
-	var req loginPOSRequest
+func (h *AuthHandler) LoginPos(w http.ResponseWriter, r *http.Request) {
+	var req loginPosRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.AuthenticatePOS(req.VendorID, req.Name, req.Password)
+	accessToken, refreshToken, err := h.service.AuthenticatePos(req.VendorID, req.Name, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -95,32 +98,135 @@ func (h *AuthHandler) LoginPOS(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-/* func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
-	var req loginRequest
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type RefreshTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req RefreshTokenRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	deviceID, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsDeviceIDKey)
+	// Parse the refresh token to extract claims
+	token, err := jwt.Parse(req.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		// You may want to check the signing method here
+		return []byte(h.service.config.JWTRefreshSecret), nil
+	})
 
-	if !ok {
-		http.Error(w, "Could not find DeviceID claim", http.StatusInternalServerError)
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
 		return
 	}
 
-	deviceIDUint, ok := deviceID.(uint)
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		http.Error(w, "Invalid DeviceID type", http.StatusInternalServerError)
+		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 		return
 	}
 
-	err := h.service.UpdatePassword(deviceIDUint, req.Password)
+	role, _ := claims["role"].(string)
+	vendorID, _ := claims["vendor_id"].(uint)
+	passwordVersion, _ := claims["password_version"].(uint32)
+	posID, _ := claims["pos_id"].(uint)
 
+	accessToken, refreshToken, err := h.service.RefreshToken(req.RefreshToken, vendorID, role, passwordVersion, posID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-} */
+	resp := RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+type UpdatePasswordRequest struct {
+	CurrentPassword string `json:"current_password,omitempty"` // Optional: always except for vendor updating pos password
+	NewPassword     string `json:"new_password"`
+	PosID           *uint  `json:"pos_id,omitempty"` // Optional: only for vendor updating POS password
+}
+
+func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	var req UpdatePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	role, _ := r.Context().Value(models.ClaimsRoleKey).(string)
+	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
+	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
+
+	switch role {
+	case "vendor":
+		if req.PosID != nil {
+			// Vendor updating POS password
+			if vendorIDPtr == nil {
+				http.Error(w, "Invalid vendor_id claim", http.StatusUnauthorized)
+				return
+			}
+			accessToken, refreshToken, err := h.service.UpdatePosPasswordFromVendor(*vendorIDPtr, *req.PosID, req.NewPassword)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			resp := loginResponse{
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(resp)
+			return
+		} else {
+			// Vendor updating own password
+			if vendorIDPtr == nil {
+				http.Error(w, "Invalid vendor_id claim", http.StatusUnauthorized)
+				return
+			}
+			accessToken, refreshToken, err := h.service.UpdateVendorPassword(*vendorIDPtr, req.CurrentPassword, req.NewPassword)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			resp := loginResponse{
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(resp)
+			return
+		}
+	case "pos":
+		// POS can only update its own password
+		if posIDPtr == nil {
+			http.Error(w, "Invalid pos_id claim", http.StatusUnauthorized)
+			return
+		}
+		accessToken, refreshToken, err := h.service.UpdatePosPassword(*posIDPtr, *vendorIDPtr, req.CurrentPassword, req.NewPassword)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		resp := loginResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+}

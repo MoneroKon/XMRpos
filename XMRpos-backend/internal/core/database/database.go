@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"log"
+	/* "log" */
 
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
@@ -12,7 +12,7 @@ import (
 
 func NewPostgresClient(cfg *config.Config) (*gorm.DB, error) {
 	// Connect to the default database to check for the existence of the target database
-	defaultDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=postgres sslmode=disable",
+	/* defaultDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=postgres sslmode=disable",
 		cfg.DBHost, cfg.DBUser, cfg.DBPassword)
 
 	defaultDB, err := gorm.Open(postgres.Open(defaultDSN), &gorm.Config{})
@@ -51,7 +51,7 @@ func NewPostgresClient(cfg *config.Config) (*gorm.DB, error) {
 			return nil, fmt.Errorf("failed to grant privileges: %w", err)
 		}
 		log.Printf("Granted all privileges on database %s to user %s", cfg.DBName, cfg.DBUser)
-	}
+	} */
 
 	// Connect to the target database
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -66,7 +66,7 @@ func NewPostgresClient(cfg *config.Config) (*gorm.DB, error) {
 	err = db.AutoMigrate(
 		&models.Invite{},
 		&models.Transaction{},
-		&models.POS{},
+		&models.Pos{},
 		&models.Vendor{},
 	)
 	if err != nil {

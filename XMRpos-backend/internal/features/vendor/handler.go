@@ -29,10 +29,10 @@ func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.service.CreateVendor(req.Name, req.Password, req.InviteCode)
+	httpErr := h.service.CreateVendor(req.Name, req.Password, req.InviteCode)
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
 		return
 	}
 
@@ -55,9 +55,9 @@ func (h *VendorHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.service.DeleteVendor(*(vendorID.(*uint)))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	httpErr := h.service.DeleteVendor(*(vendorID.(*uint)))
+	if httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
 		return
 	}
 
@@ -66,13 +66,13 @@ func (h *VendorHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-type createPOSRequest struct {
+type createPosRequest struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
-func (h *VendorHandler) CreatePOS(w http.ResponseWriter, r *http.Request) {
-	var req createPOSRequest
+func (h *VendorHandler) CreatePos(w http.ResponseWriter, r *http.Request) {
+	var req createPosRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -90,10 +90,10 @@ func (h *VendorHandler) CreatePOS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.service.CreatePOS(req.Name, req.Password, *(vendorID.(*uint)))
+	httpErr := h.service.CreatePos(req.Name, req.Password, *(vendorID.(*uint)))
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
 		return
 	}
 

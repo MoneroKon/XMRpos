@@ -10,8 +10,8 @@ type Transaction struct {
 	gorm.Model
 	VendorID              uint      `gorm:"not null"` // Foreign key field
 	Vendor                Vendor    `gorm:"foreignKey:VendorID"`
-	POSID                 uint      `gorm:"not null"` // Foreign key field
-	POS                   POS       `gorm:"foreignKey:POSID"`
+	PosID                 uint      `gorm:"not null"` // Foreign key field
+	Pos                   Pos      `gorm:"foreignKey:PosID"`
 	TxHash                string    `gorm:"not null"`
 	Amount                int64     `gorm:"not null"`
 	SeenInMempool         bool      `gorm:"not null"`

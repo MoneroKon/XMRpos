@@ -39,23 +39,24 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	r.Group(func(r chi.Router) {
 		r.Post("/auth/login-admin", authHandler.LoginAdmin)
 		r.Post("/auth/login-vendor", authHandler.LoginVendor)
-		r.Post("/auth/login-pos", authHandler.LoginPOS)
+		r.Post("/auth/login-pos", authHandler.LoginPos)
+		r.Post("/auth/refresh", authHandler.RefreshToken)
 
 		r.Post("/vendor/create", vendorHandler.CreateVendor)
 	})
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
-		r.Use(localMiddleware.AuthMiddleware(cfg))
+		r.Use(localMiddleware.AuthMiddleware(cfg, authRepository))
 
 		// Admin routes
 		r.Post("/admin/invite", adminHandler.CreateInvite)
 
 		// Vendor routes
 		r.Post("/vendor/delete", vendorHandler.DeleteVendor)
-		r.Post("/vendor/create-pos", vendorHandler.CreatePOS)
+		r.Post("/vendor/create-pos", vendorHandler.CreatePos)
 
-		/* r.Post("/auth/update-password", authHandler.UpdatePassword) */
+		r.Post("/auth/update-password", authHandler.UpdatePassword)
 
 		/* // Device management
 		r.Post("/auth/register", authHandler.RegisterDevice) */

@@ -13,9 +13,9 @@ type VendorRepository interface {
 	GetVendorByID(vendorID uint) (*models.Vendor, error)
 	DeleteVendor(vendorID uint) error
 	DeleteAllTransactionsForVendor(vendorID uint) error
-	DeleteAllPOSForVendor(vendorID uint) error
-	POSByNameExistsForVendor(name string, vendorID uint) (bool, error)
-	CreatePOS(pos *models.POS) error
+	DeleteAllPosForVendor(vendorID uint) error
+	PosByNameExistsForVendor(name string, vendorID uint) (bool, error)
+	CreatePos(pos *models.Pos) error
 }
 
 type vendorRepository struct {
@@ -69,19 +69,19 @@ func (r *vendorRepository) DeleteAllTransactionsForVendor(vendorID uint) error {
 	return r.db.Where("vendor_id = ?", vendorID).Delete(&models.Transaction{}).Error
 }
 
-func (r *vendorRepository) DeleteAllPOSForVendor(vendorID uint) error {
-	return r.db.Where("vendor_id = ?", vendorID).Delete(&models.POS{}).Error
+func (r *vendorRepository) DeleteAllPosForVendor(vendorID uint) error {
+	return r.db.Where("vendor_id = ?", vendorID).Delete(&models.Pos{}).Error
 }
 
-func (r *vendorRepository) POSByNameExistsForVendor(name string, vendorID uint) (bool, error) {
+func (r *vendorRepository) PosByNameExistsForVendor(name string, vendorID uint) (bool, error) {
 	var count int64
-	if err := r.db.Model(&models.POS{}).Where("name = ? AND vendor_id = ?", name, vendorID).Count(&count).Error; err != nil {
+	if err := r.db.Model(&models.Pos{}).Where("name = ? AND vendor_id = ?", name, vendorID).Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (r *vendorRepository) CreatePOS(pos *models.POS) error {
+func (r *vendorRepository) CreatePos(pos *models.Pos) error {
 	if err := r.db.Create(pos).Error; err != nil {
 		return err
 	}
