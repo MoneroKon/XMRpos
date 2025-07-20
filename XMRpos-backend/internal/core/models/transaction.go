@@ -11,7 +11,7 @@ type Transaction struct {
 	VendorID              uint      `gorm:"not null"` // Foreign key field
 	Vendor                Vendor    `gorm:"foreignKey:VendorID"`
 	PosID                 uint      `gorm:"not null"` // Foreign key field
-	Pos                   Pos      `gorm:"foreignKey:PosID"`
+	Pos                   Pos       `gorm:"foreignKey:PosID"`
 	TxHash                string    `gorm:"not null"`
 	Amount                int64     `gorm:"not null"`
 	SeenInMempool         bool      `gorm:"not null"`

@@ -57,19 +57,19 @@ func (r *authRepository) FindPosByID(id uint) (*models.Pos, error) {
 func (r *authRepository) UpdateVendorPasswordHash(vendorID uint, newPasswordHash string) (passwordVersion uint32, err error) {
 	// Update password and increment password_version
 	err = r.db.Model(&models.Vendor{}).
-			Where("id = ?", vendorID).
-			Updates(map[string]interface{}{
-					"password_hash":    newPasswordHash,
-					"password_version": gorm.Expr("password_version + 1"),
-			}).Error
+		Where("id = ?", vendorID).
+		Updates(map[string]interface{}{
+			"password_hash":    newPasswordHash,
+			"password_version": gorm.Expr("password_version + 1"),
+		}).Error
 	if err != nil {
-			return 0, err
+		return 0, err
 	}
 
 	// Fetch the new password_version
 	var vendor models.Vendor
 	if err := r.db.Select("password_version").Where("id = ?", vendorID).First(&vendor).Error; err != nil {
-			return 0, err
+		return 0, err
 	}
 	return vendor.PasswordVersion, nil
 }
@@ -77,19 +77,19 @@ func (r *authRepository) UpdateVendorPasswordHash(vendorID uint, newPasswordHash
 func (r *authRepository) UpdatePosPasswordHash(posID uint, newPasswordHash string) (passwordVersion uint32, err error) {
 	// Update password and increment password_version
 	err = r.db.Model(&models.Pos{}).
-			Where("id = ?", posID).
-			Updates(map[string]interface{}{
-					"password_hash":    newPasswordHash,
-					"password_version": gorm.Expr("password_version + 1"),
-			}).Error
+		Where("id = ?", posID).
+		Updates(map[string]interface{}{
+			"password_hash":    newPasswordHash,
+			"password_version": gorm.Expr("password_version + 1"),
+		}).Error
 	if err != nil {
-			return 0, err
+		return 0, err
 	}
 
 	// Fetch the new password_version
 	var pos models.Pos
 	if err := r.db.Select("password_version").Where("id = ?", posID).First(&pos).Error; err != nil {
-			return 0, err
+		return 0, err
 	}
 	return pos.PasswordVersion, nil
 }
