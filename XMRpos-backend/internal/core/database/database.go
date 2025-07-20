@@ -66,6 +66,7 @@ func NewPostgresClient(cfg *config.Config) (*gorm.DB, error) {
 	err = db.AutoMigrate(
 		&models.Invite{},
 		&models.Transaction{},
+		&models.SubTransaction{},
 		&models.Pos{},
 		&models.Vendor{},
 	)

@@ -7,7 +7,9 @@ import (
 	localMiddleware "github.com/monerokon/xmrpos/xmrpos-backend/internal/core/server/middleware"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/admin"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/auth"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/pos"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/vendor"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/thirdparty/moneropay"
 
 	/* "github.com/monerokon/xmrpos/xmrpos-backend/internal/server/middleware/authmw" */
 	"gorm.io/gorm"
@@ -20,20 +22,25 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	moneroPayClient := moneropay.NewMoneroPayAPIClient()
+
 	// Initialize repositories
 	adminRepository := admin.NewAdminRepository(db)
 	authRepository := auth.NewAuthRepository(db)
 	vendorRepository := vendor.NewVendorRepository(db)
+	posRepository := pos.NewPosRepository(db)
 
 	// Initialize services
 	adminService := admin.NewAdminService(adminRepository, cfg)
 	authService := auth.NewAuthService(authRepository, cfg)
 	vendorService := vendor.NewVendorService(vendorRepository, cfg)
+	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
 
 	// Initialize handlers
 	adminHandler := admin.NewAdminHandler(adminService)
 	authHandler := auth.NewAuthHandler(authService)
 	vendorHandler := vendor.NewVendorHandler(vendorService)
+	posHandler := pos.NewPosHandler(posService)
 
 	// Public routes
 	r.Group(func(r chi.Router) {
@@ -49,6 +56,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	r.Group(func(r chi.Router) {
 		r.Use(localMiddleware.AuthMiddleware(cfg, authRepository))
 
+		// Auth routes
+		r.Post("/auth/update-password", authHandler.UpdatePassword)
+
 		// Admin routes
 		r.Post("/admin/invite", adminHandler.CreateInvite)
 
@@ -56,7 +66,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 		r.Post("/vendor/delete", vendorHandler.DeleteVendor)
 		r.Post("/vendor/create-pos", vendorHandler.CreatePos)
 
-		r.Post("/auth/update-password", authHandler.UpdatePassword)
+		// POS routes
+		r.Post("/pos/create-transaction", posHandler.CreateTransaction)
 
 		/* // Device management
 		r.Post("/auth/register", authHandler.RegisterDevice) */
