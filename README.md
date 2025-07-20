@@ -113,9 +113,5 @@ The APK will be available in the app/build/outputs/apk/ directory.
 **Address**:
 
 ```
-42Za1V9t1PiPxYTj6UjogNiqaWYK1zMLuYBFFdUsqqvbGGKsw3KfNbkdwpd8QvyjPxGBBNNRJirKW9nyV4bqXvA7QMnS3Ax
+88zkpYQRJPmeuycSN7Jx3UHq9vH1u2dD8eE1rECvCAouPj75Cdnu1eUacQ5p7ZMvdr4e6BRe2FShv4HoatSs9HcwEeZCupZ
 ``` 
-
-**Private View Key**: `71472759ca4802d4f0f586edcf6d0f4cf4499708853ce097442b5b3090aaf00f`
-
-**Height**: `3321080`
