@@ -13,13 +13,13 @@ type Transaction struct {
 	PosID                 uint             `gorm:"not null"` // Foreign key field
 	Pos                   Pos              `gorm:"foreignKey:PosID"`
 	Amount                int64            `gorm:"not null"`
-	SeenInMempool         bool             `gorm:"not null;default:false"`
-	Confirmations         int              `gorm:"not null;default:0"`
-	RequiredConfirmations int              `gorm:"not null"`
+	RequiredConfirmations int64            `gorm:"not null"`
 	Currency              string           `gorm:"not null"`
 	AmountInCurrency      float64          `gorm:"not null"`
 	Description           *string          `gorm:"type:text"`
-	SubAddress            string           `gorm:"not null"`
+	SubAddress            *string          `gorm:"type:text"`
+	Accepted              bool             `gorm:"not null;default:false"`
+	Confirmed             bool             `gorm:"not null;default:false"`
 	SubTransactions       []SubTransaction `gorm:"foreignKey:TransactionID"`
 }
 

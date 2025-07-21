@@ -21,7 +21,7 @@ type createTransactionRequest struct {
 	Description           *string `json:"description"`
 	AmountInCurrency      float64 `json:"amount_in_currency"`
 	Currency              string  `json:"currency"`
-	RequiredConfirmations int     `json:"required_confirmations"`
+	RequiredConfirmations int64   `json:"required_confirmations"`
 }
 
 type createTransactionResponse struct {
@@ -32,6 +32,11 @@ func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	var req createTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.RequiredConfirmations > 10 || req.RequiredConfirmations < 0 {
+		http.Error(w, "Required confirmations must be between 0 and 10", http.StatusBadRequest)
 		return
 	}
 

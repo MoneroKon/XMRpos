@@ -20,11 +20,11 @@ type Services struct {
 }
 
 type ReceiveAddressResponse struct {
-	Amount      Amount      `json:"amount"`
-	Complete    bool        `json:"complete"`
-	Description string      `json:"description"`
-	CreatedAt   time.Time   `json:"created_at"`
-	Transaction Transaction `json:"transaction"`
+	Amount       Amount        `json:"amount"`
+	Complete     bool          `json:"complete"`
+	Description  string        `json:"description"`
+	CreatedAt    time.Time     `json:"created_at"`
+	Transactions []Transaction `json:"transactions"`
 }
 
 // Amount represents the amount-related details
@@ -42,10 +42,10 @@ type Covered struct {
 // Transaction represents each individual transaction in the response
 type Transaction struct {
 	Amount          int64     `json:"amount"`
-	Confirmations   int       `json:"confirmations"`
+	Confirmations   int64     `json:"confirmations"`
 	DoubleSpendSeen bool      `json:"double_spend_seen"`
 	Fee             int64     `json:"fee"`
-	Height          int       `json:"height"`
+	Height          int64     `json:"height"`
 	Timestamp       time.Time `json:"timestamp"`
 	TxHash          string    `json:"tx_hash"`
 	UnlockTime      int64     `json:"unlock_time"`

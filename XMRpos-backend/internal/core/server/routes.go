@@ -7,6 +7,7 @@ import (
 	localMiddleware "github.com/monerokon/xmrpos/xmrpos-backend/internal/core/server/middleware"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/admin"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/auth"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/callback"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/pos"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/vendor"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/thirdparty/moneropay"
@@ -29,27 +30,35 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	authRepository := auth.NewAuthRepository(db)
 	vendorRepository := vendor.NewVendorRepository(db)
 	posRepository := pos.NewPosRepository(db)
+	callbackRepository := callback.NewCallbackRepository(db)
 
 	// Initialize services
 	adminService := admin.NewAdminService(adminRepository, cfg)
 	authService := auth.NewAuthService(authRepository, cfg)
 	vendorService := vendor.NewVendorService(vendorRepository, cfg)
 	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
+	callbackService := callback.NewCallbackService(callbackRepository, cfg)
 
 	// Initialize handlers
 	adminHandler := admin.NewAdminHandler(adminService)
 	authHandler := auth.NewAuthHandler(authService)
 	vendorHandler := vendor.NewVendorHandler(vendorService)
 	posHandler := pos.NewPosHandler(posService)
+	callbackHandler := callback.NewCallbackHandler(callbackService)
 
 	// Public routes
 	r.Group(func(r chi.Router) {
+		// Auth routes
 		r.Post("/auth/login-admin", authHandler.LoginAdmin)
 		r.Post("/auth/login-vendor", authHandler.LoginVendor)
 		r.Post("/auth/login-pos", authHandler.LoginPos)
 		r.Post("/auth/refresh", authHandler.RefreshToken)
 
+		// Vendor routes
 		r.Post("/vendor/create", vendorHandler.CreateVendor)
+
+		// Callback routes
+		r.Post("/callback/receive/{jwt}", callbackHandler.ReceiveTransaction)
 	})
 
 	// Protected routes

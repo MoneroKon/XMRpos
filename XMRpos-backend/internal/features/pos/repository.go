@@ -7,6 +7,7 @@ import (
 
 type PosRepository interface {
 	CreateTransaction(*models.Transaction) (*models.Transaction, error)
+	UpdateTransaction(*models.Transaction) (*models.Transaction, error)
 }
 
 type posRepository struct {
@@ -21,6 +22,15 @@ func (r *posRepository) CreateTransaction(
 	transaction *models.Transaction,
 ) (*models.Transaction, error) {
 	if err := r.db.Create(transaction).Error; err != nil {
+		return nil, err
+	}
+	return transaction, nil
+}
+
+func (r *posRepository) UpdateTransaction(
+	transaction *models.Transaction,
+) (*models.Transaction, error) {
+	if err := r.db.Save(transaction).Error; err != nil {
 		return nil, err
 	}
 	return transaction, nil

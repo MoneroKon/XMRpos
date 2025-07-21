@@ -12,6 +12,9 @@ type Config struct {
 	AdminName     string
 	AdminPassword string
 
+	// Server Configuration
+	Port string
+
 	// Database Configuration
 	DBHost     string
 	DBUser     string
@@ -20,11 +23,13 @@ type Config struct {
 	DBPort     string
 
 	// JWT Configuration
-	JWTSecret        string
-	JWTRefreshSecret string
+	JWTSecret          string
+	JWTRefreshSecret   string
+	JWTMoneroPaySecret string
 
 	// MoneroPay API Configuration
-	MoneroPayBaseURL string
+	MoneroPayBaseURL     string
+	MoneroPayCallbackURL string
 }
 
 func LoadConfig() (*Config, error) {
@@ -37,6 +42,9 @@ func LoadConfig() (*Config, error) {
 		AdminName:     os.Getenv("ADMIN_NAME"),
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
 
+		// Server Configuration
+		Port: os.Getenv("PORT"),
+
 		// Database Configuration
 		DBHost:     os.Getenv("DB_HOST"),
 		DBUser:     os.Getenv("DB_USER"),
@@ -45,16 +53,19 @@ func LoadConfig() (*Config, error) {
 		DBPort:     os.Getenv("DB_PORT"),
 
 		// JWT Configuration
-		JWTSecret:        os.Getenv("JWT_SECRET"),
-		JWTRefreshSecret: os.Getenv("JWT_REFRESH_SECRET"),
+		JWTSecret:          os.Getenv("JWT_SECRET"),
+		JWTRefreshSecret:   os.Getenv("JWT_REFRESH_SECRET"),
+		JWTMoneroPaySecret: os.Getenv("JWT_MONEROPAY_SECRET"),
 
 		// MoneroPay API Configuration
-		MoneroPayBaseURL: os.Getenv("MONEROPAY_BASE_URL"),
+		MoneroPayBaseURL:     os.Getenv("MONEROPAY_BASE_URL"),
+		MoneroPayCallbackURL: os.Getenv("MONEROPAY_CALLBACK_URL"),
 	}
 
 	// Validate required fields
 	if config.AdminName == "" ||
 		config.AdminPassword == "" ||
+		config.Port == "" ||
 		config.DBHost == "" ||
 		config.DBUser == "" ||
 		config.DBPassword == "" ||
@@ -62,7 +73,9 @@ func LoadConfig() (*Config, error) {
 		config.DBPort == "" ||
 		config.JWTSecret == "" ||
 		config.JWTRefreshSecret == "" ||
-		config.MoneroPayBaseURL == "" {
+		config.JWTMoneroPaySecret == "" ||
+		config.MoneroPayBaseURL == "" ||
+		config.MoneroPayCallbackURL == "" {
 		return nil, fmt.Errorf("missing required environment variables")
 	}
 

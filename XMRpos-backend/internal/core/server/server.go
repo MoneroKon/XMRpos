@@ -31,7 +31,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 func (s *Server) Start() error {
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         "0.0.0.0:" + s.config.Port,
 		Handler:      s.router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
