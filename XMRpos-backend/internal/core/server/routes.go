@@ -1,6 +1,9 @@
 package server
 
 import (
+	"context"
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
@@ -37,7 +40,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	authService := auth.NewAuthService(authRepository, cfg)
 	vendorService := vendor.NewVendorService(vendorRepository, cfg)
 	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
-	callbackService := callback.NewCallbackService(callbackRepository, cfg)
+	callbackService := callback.NewCallbackService(callbackRepository, cfg, moneroPayClient)
+	callbackService.StartConfirmationChecker(context.Background(), 30*time.Second) // Check every 30 seconds
 
 	// Initialize handlers
 	adminHandler := admin.NewAdminHandler(adminService)

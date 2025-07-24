@@ -18,7 +18,7 @@ func NewCallbackHandler(service *CallbackService) *CallbackHandler {
 
 func (h *CallbackHandler) ReceiveTransaction(w http.ResponseWriter, r *http.Request) {
 
-	var req moneropay.ReceiveAddressResponse
+	var req moneropay.CallbackResponse
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return

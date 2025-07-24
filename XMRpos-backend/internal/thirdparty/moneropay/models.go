@@ -27,6 +27,24 @@ type ReceiveAddressResponse struct {
 	Transactions []Transaction `json:"transactions"`
 }
 
+type CallbackResponse struct {
+	Amount      Amount      `json:"amount"`
+	Complete    bool        `json:"complete"`
+	Description string      `json:"description"`
+	CreatedAt   time.Time   `json:"created_at"`
+	Transaction Transaction `json:"transaction"`
+}
+
+func (cb CallbackResponse) ToReceiveAddressResponse() ReceiveAddressResponse {
+	return ReceiveAddressResponse{
+		Amount:       cb.Amount,
+		Complete:     cb.Complete,
+		Description:  cb.Description,
+		CreatedAt:    cb.CreatedAt,
+		Transactions: []Transaction{cb.Transaction},
+	}
+}
+
 // Amount represents the amount-related details
 type Amount struct {
 	Expected int64   `json:"expected"`

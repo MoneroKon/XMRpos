@@ -8,19 +8,19 @@ import (
 
 type Transaction struct {
 	gorm.Model
-	VendorID              uint             `gorm:"not null"` // Foreign key field
-	Vendor                Vendor           `gorm:"foreignKey:VendorID"`
-	PosID                 uint             `gorm:"not null"` // Foreign key field
-	Pos                   Pos              `gorm:"foreignKey:PosID"`
-	Amount                int64            `gorm:"not null"`
-	RequiredConfirmations int64            `gorm:"not null"`
-	Currency              string           `gorm:"not null"`
-	AmountInCurrency      float64          `gorm:"not null"`
-	Description           *string          `gorm:"type:text"`
-	SubAddress            *string          `gorm:"type:text"`
-	Accepted              bool             `gorm:"not null;default:false"`
-	Confirmed             bool             `gorm:"not null;default:false"`
-	SubTransactions       []SubTransaction `gorm:"foreignKey:TransactionID"`
+	VendorID              uint              `gorm:"not null"` // Foreign key field
+	Vendor                Vendor            `gorm:"foreignKey:VendorID"`
+	PosID                 uint              `gorm:"not null"` // Foreign key field
+	Pos                   Pos               `gorm:"foreignKey:PosID"`
+	Amount                int64             `gorm:"not null"`
+	RequiredConfirmations int64             `gorm:"not null"`
+	Currency              string            `gorm:"not null"`
+	AmountInCurrency      float64           `gorm:"not null"`
+	Description           *string           `gorm:"type:text"`
+	SubAddress            *string           `gorm:"type:text"`
+	Accepted              bool              `gorm:"not null;default:false"`
+	Confirmed             bool              `gorm:"not null;default:false"`
+	SubTransactions       []*SubTransaction `gorm:"foreignKey:TransactionID"`
 }
 
 type SubTransaction struct {
