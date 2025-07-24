@@ -11,6 +11,7 @@ import (
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/admin"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/auth"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/callback"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/misc"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/pos"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/vendor"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/thirdparty/moneropay"
@@ -34,6 +35,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	vendorRepository := vendor.NewVendorRepository(db)
 	posRepository := pos.NewPosRepository(db)
 	callbackRepository := callback.NewCallbackRepository(db)
+	miscRepository := misc.NewMiscRepository(db)
 
 	// Initialize services
 	adminService := admin.NewAdminService(adminRepository, cfg)
@@ -42,6 +44,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
 	callbackService := callback.NewCallbackService(callbackRepository, cfg, moneroPayClient)
 	callbackService.StartConfirmationChecker(context.Background(), 30*time.Second) // Check every 30 seconds
+	miscService := misc.NewMiscService(miscRepository, cfg, moneroPayClient)
 
 	// Initialize handlers
 	adminHandler := admin.NewAdminHandler(adminService)
@@ -49,6 +52,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	vendorHandler := vendor.NewVendorHandler(vendorService)
 	posHandler := pos.NewPosHandler(posService)
 	callbackHandler := callback.NewCallbackHandler(callbackService)
+	miscHandler := misc.NewMiscHandler(miscService)
 
 	// Public routes
 	r.Group(func(r chi.Router) {
@@ -63,6 +67,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 
 		// Callback routes
 		r.Post("/callback/receive/{jwt}", callbackHandler.ReceiveTransaction)
+
+		// Miscellaneous routes
+		r.Get("/misc/health", miscHandler.GetHealth)
 	})
 
 	// Protected routes
