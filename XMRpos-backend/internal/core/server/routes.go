@@ -81,6 +81,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 
 		// POS routes
 		r.Post("/pos/create-transaction", posHandler.CreateTransaction)
+		r.HandleFunc("/pos/ws/transaction", posHandler.TransactionWS)
 
 		/* // Device management
 		r.Post("/auth/register", authHandler.RegisterDevice) */

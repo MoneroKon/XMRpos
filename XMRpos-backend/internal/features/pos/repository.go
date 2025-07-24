@@ -6,6 +6,7 @@ import (
 )
 
 type PosRepository interface {
+	FindTransactionByID(id uint) (*models.Transaction, error)
 	CreateTransaction(*models.Transaction) (*models.Transaction, error)
 	UpdateTransaction(*models.Transaction) (*models.Transaction, error)
 }
@@ -16,6 +17,16 @@ type posRepository struct {
 
 func NewPosRepository(db *gorm.DB) PosRepository {
 	return &posRepository{db: db}
+}
+
+func (r *posRepository) FindTransactionByID(
+	id uint,
+) (*models.Transaction, error) {
+	var transaction models.Transaction
+	if err := r.db.First(&transaction, id).Error; err != nil {
+		return nil, err
+	}
+	return &transaction, nil
 }
 
 func (r *posRepository) CreateTransaction(

@@ -68,3 +68,17 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 
 	return resp.Address, nil
 }
+
+// Check if the vendor and POS are authorized for the transaction
+func (s *PosService) IsAuthorizedForTransaction(vendorID uint, posID uint, transactionID uint) bool {
+	// Get the transaction by ID
+	transaction, err := s.repo.FindTransactionByID(transactionID)
+	if err != nil {
+		return false
+	}
+
+	if transaction.VendorID != vendorID || transaction.PosID != posID {
+		return false
+	}
+	return true
+}

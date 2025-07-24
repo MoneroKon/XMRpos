@@ -8,6 +8,8 @@ import (
 
 	"time"
 
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/pos"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
@@ -151,6 +153,8 @@ func (s *CallbackService) processTransaction(transactionID uint, transactionToPr
 	if err != nil {
 		return models.NewHTTPError(http.StatusInternalServerError, "Failed to update transaction: "+err.Error())
 	}
+
+	pos.NotifyTransactionUpdate(transaction.ID, transaction)
 
 	return nil
 }
