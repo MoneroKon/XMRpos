@@ -23,7 +23,7 @@ func (r *posRepository) FindTransactionByID(
 	id uint,
 ) (*models.Transaction, error) {
 	var transaction models.Transaction
-	if err := r.db.First(&transaction, id).Error; err != nil {
+	if err := r.db.Preload("SubTransactions").First(&transaction, id).Error; err != nil {
 		return nil, err
 	}
 	return &transaction, nil

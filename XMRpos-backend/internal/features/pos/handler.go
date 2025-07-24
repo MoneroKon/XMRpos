@@ -3,7 +3,9 @@ package pos
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/utils"
 )
@@ -61,4 +63,35 @@ func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *PosHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
+	vars := chi.URLParam(r, "id")
+	transactionID, err := strconv.ParseUint(vars, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid transaction ID", http.StatusBadRequest)
+		return
+	}
+	transactionIDUint := uint(transactionID)
+
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "pos" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
+	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
+	if vendorIDPtr == nil || posIDPtr == nil {
+		http.Error(w, "Vendor ID and POS ID are required", http.StatusBadRequest)
+		return
+	}
+
+	transaction, httpErr := h.service.GetTransaction(transactionIDUint, *vendorIDPtr, *posIDPtr)
+	if httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(transaction)
 }

@@ -49,7 +49,14 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 	}
 	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
 	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
-	if !h.service.IsAuthorizedForTransaction(*vendorIDPtr, *posIDPtr, TransactionID) {
+
+	transaction, err := h.service.repo.FindTransactionByID(TransactionID)
+	if err != nil {
+		http.Error(w, "Transaction not found", http.StatusNotFound)
+		return
+	}
+
+	if !h.service.IsAuthorizedForTransaction(*vendorIDPtr, *posIDPtr, transaction) {
 		http.Error(w, "Unauthorized for this transaction", http.StatusUnauthorized)
 		return
 	}
