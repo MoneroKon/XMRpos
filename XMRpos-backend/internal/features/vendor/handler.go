@@ -102,3 +102,68 @@ func (h *VendorHandler) CreatePos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
+
+type getBalanceResponse struct {
+	Balance int64 `json:"balance"`
+}
+
+func (h *VendorHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "vendor" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vendorID, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsVendorIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized: vendorID not found", http.StatusUnauthorized)
+		return
+	}
+
+	balance, httpErr := h.service.GetBalance(*(vendorID.(*uint)))
+	if httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
+		return
+	}
+
+	resp := getBalanceResponse{
+		Balance: *balance,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+type transferBalanceRequest struct {
+	Address string `json:"address"`
+}
+
+func (h *VendorHandler) TransferBalance(w http.ResponseWriter, r *http.Request) {
+	var req transferBalanceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "vendor" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vendorID, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsVendorIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized: vendorID not found", http.StatusUnauthorized)
+		return
+	}
+
+	httpErr := h.service.CreateTransfer(*(vendorID.(*uint)), req.Address)
+	if httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
+		return
+	}
+
+	resp := "Transfer initiated successfully"
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}

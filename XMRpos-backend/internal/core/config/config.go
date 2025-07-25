@@ -30,6 +30,11 @@ type Config struct {
 	// MoneroPay API Configuration
 	MoneroPayBaseURL     string
 	MoneroPayCallbackURL string
+
+	// Monero Wallet RPC Configuration
+	MoneroWalletRPCEndpoint string
+	MoneroWalletRPCUsername string
+	MoneroWalletRPCPassword string
 }
 
 func LoadConfig() (*Config, error) {
@@ -60,6 +65,11 @@ func LoadConfig() (*Config, error) {
 		// MoneroPay API Configuration
 		MoneroPayBaseURL:     os.Getenv("MONEROPAY_BASE_URL"),
 		MoneroPayCallbackURL: os.Getenv("MONEROPAY_CALLBACK_URL"),
+
+		// Monero Wallet RPC Configuration
+		MoneroWalletRPCEndpoint: os.Getenv("MONERO_WALLET_RPC_ENDPOINT"),
+		MoneroWalletRPCUsername: os.Getenv("MONERO_WALLET_RPC_USERNAME"),
+		MoneroWalletRPCPassword: os.Getenv("MONERO_WALLET_RPC_PASSWORD"),
 	}
 
 	// Validate required fields
@@ -75,7 +85,8 @@ func LoadConfig() (*Config, error) {
 		config.JWTRefreshSecret == "" ||
 		config.JWTMoneroPaySecret == "" ||
 		config.MoneroPayBaseURL == "" ||
-		config.MoneroPayCallbackURL == "" {
+		config.MoneroPayCallbackURL == "" ||
+		config.MoneroWalletRPCEndpoint == "" {
 		return nil, fmt.Errorf("missing required environment variables")
 	}
 

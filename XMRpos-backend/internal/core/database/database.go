@@ -69,6 +69,7 @@ func NewPostgresClient(cfg *config.Config) (*gorm.DB, error) {
 		&models.SubTransaction{},
 		&models.Pos{},
 		&models.Vendor{},
+		&models.Transfer{},
 	)
 	if err != nil {
 		return nil, err

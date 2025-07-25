@@ -16,6 +16,13 @@ type VendorRepository interface {
 	DeleteAllPosForVendor(vendorID uint) error
 	PosByNameExistsForVendor(name string, vendorID uint) (bool, error)
 	CreatePos(pos *models.Pos) error
+	GetBalance(vendorID uint) (int64, error)
+	GetActiveTransferByVendorID(vendorID uint) (*models.Transfer, error)
+	GetAllTransferableTransactions(vendorID uint) ([]*models.Transaction, error)
+	CreateTransfer(transfer *models.Transfer) error
+	GetTransfersToComplete(limit int) ([]*models.Transfer, error)
+	MarkTransactionsTransferred(tx *gorm.DB, transferID uint, transactionIDs []uint) error
+	MarkTransferCompleted(tx *gorm.DB, transferID uint, AmountTransferred int64, txHash string) error
 }
 
 type vendorRepository struct {
@@ -86,4 +93,69 @@ func (r *vendorRepository) CreatePos(pos *models.Pos) error {
 		return err
 	}
 	return nil
+}
+
+func (r *vendorRepository) GetBalance(vendorID uint) (int64, error) {
+	var balance int64
+	err := r.db.Model(&models.Transaction{}).
+		Where("vendor_id = ? AND confirmed = ? AND transferred = ?", vendorID, true, false).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&balance).Error
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
+}
+
+func (r *vendorRepository) GetActiveTransferByVendorID(vendorID uint) (*models.Transfer, error) {
+	var transfer models.Transfer
+	if err := r.db.Where("vendor_id = ? AND completed = ?", vendorID, false).First(&transfer).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // No transfer found
+		}
+		return nil, err
+	}
+	return &transfer, nil
+}
+
+func (r *vendorRepository) GetAllTransferableTransactions(vendorID uint) ([]*models.Transaction, error) {
+	var transactions []*models.Transaction
+	if err := r.db.Where("vendor_id = ? AND confirmed = ? AND transferred = ?", vendorID, true, false).Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+	return transactions, nil
+}
+
+func (r *vendorRepository) CreateTransfer(transfer *models.Transfer) error {
+	if err := r.db.Create(transfer).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *vendorRepository) GetTransfersToComplete(limit int) ([]*models.Transfer, error) {
+	var transfers []*models.Transfer
+	if err := r.db.Preload("Transactions").Where("completed = ?", false).Order("created_at ASC").Limit(limit).Find(&transfers).Error; err != nil {
+		return nil, err
+	}
+	return transfers, nil
+}
+
+func (r *vendorRepository) MarkTransactionsTransferred(tx *gorm.DB, transferID uint, transactionIDs []uint) error {
+	return tx.Model(&models.Transaction{}).
+		Where("id IN ?", transactionIDs).
+		Updates(map[string]interface{}{
+			"transferred": true,
+			"transfer_id": transferID,
+		}).Error
+}
+
+func (r *vendorRepository) MarkTransferCompleted(tx *gorm.DB, transferID uint, amountTransferred int64, txHash string) error {
+	return tx.Model(&models.Transfer{}).
+		Where("id = ?", transferID).
+		Updates(map[string]interface{}{
+			"completed":          true,
+			"tx_hash":            txHash,
+			"amount_transferred": amountTransferred,
+		}).Error
 }

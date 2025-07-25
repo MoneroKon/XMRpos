@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/rpc"
 	localMiddleware "github.com/monerokon/xmrpos/xmrpos-backend/internal/core/server/middleware"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/admin"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/auth"
@@ -29,6 +30,12 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 
 	moneroPayClient := moneropay.NewMoneroPayAPIClient()
 
+	rpcClient := rpc.NewClient(
+		cfg.MoneroWalletRPCEndpoint,
+		cfg.MoneroWalletRPCUsername,
+		cfg.MoneroWalletRPCPassword,
+	)
+
 	// Initialize repositories
 	adminRepository := admin.NewAdminRepository(db)
 	authRepository := auth.NewAuthRepository(db)
@@ -40,7 +47,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	// Initialize services
 	adminService := admin.NewAdminService(adminRepository, cfg)
 	authService := auth.NewAuthService(authRepository, cfg)
-	vendorService := vendor.NewVendorService(vendorRepository, cfg)
+	vendorService := vendor.NewVendorService(vendorRepository, db, cfg, rpcClient)
+	vendorService.StartTransferCompleter(context.Background(), 30*time.Second) // Check every 30 seconds
 	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
 	callbackService := callback.NewCallbackService(callbackRepository, cfg, moneroPayClient)
 	callbackService.StartConfirmationChecker(context.Background(), 30*time.Second) // Check every 30 seconds
@@ -85,6 +93,8 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 		// Vendor routes
 		r.Post("/vendor/delete", vendorHandler.DeleteVendor)
 		r.Post("/vendor/create-pos", vendorHandler.CreatePos)
+		r.Get("/vendor/balance", vendorHandler.GetBalance)
+		r.Post("/vendor/transfer-balance", vendorHandler.TransferBalance)
 
 		// POS routes
 		r.Post("/pos/create-transaction", posHandler.CreateTransaction)
