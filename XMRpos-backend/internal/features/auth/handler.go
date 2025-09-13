@@ -133,9 +133,11 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	role, _ := claims["role"].(string)
-	vendorID, _ := claims["vendor_id"].(uint)
-	passwordVersion, _ := claims["password_version"].(uint32)
-	posID, _ := claims["pos_id"].(uint)
+	vendorID := uint(claims["vendor_id"].(float64))
+	passwordVersion := uint32(claims["password_version"].(float64))
+	posID := uint(claims["pos_id"].(float64))
+
+	print(role, vendorID, passwordVersion, posID)
 
 	accessToken, refreshToken, err := h.service.RefreshToken(req.RefreshToken, vendorID, role, passwordVersion, posID)
 	if err != nil {
