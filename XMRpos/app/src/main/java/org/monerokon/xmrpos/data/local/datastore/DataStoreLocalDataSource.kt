@@ -1,5 +1,10 @@
 package org.monerokon.xmrpos.data.local.datastore
 
+import BACKEND_ACCESS_TOKEN
+import BACKEND_CONF_VALUE
+import BACKEND_INSTANCE_URL
+import BACKEND_REFRESH_INTERVAL
+import BACKEND_REFRESH_TOKEN
 import COMPANY_NAME
 import CONTACT_INFORMATION
 import MONERO_PAY_CONF_VALUE
@@ -174,6 +179,19 @@ class DataStoreLocalDataSource @Inject constructor(
         }
     }
 
+    fun getBackendConfValue(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[BACKEND_CONF_VALUE] ?: "0-conf"
+            }
+    }
+
+    suspend fun saveBackendConfValue(backendConfValue: String) {
+        context.dataStore.edit { preferences ->
+            preferences[BACKEND_CONF_VALUE] = backendConfValue
+        }
+    }
+
     fun getMoneroPayServerAddress(): Flow<String> {
         return context.dataStore.data
             .map { preferences ->
@@ -187,6 +205,45 @@ class DataStoreLocalDataSource @Inject constructor(
         }
     }
 
+    fun getBackendInstanceUrl(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[BACKEND_INSTANCE_URL] ?: "http://192.168.1.100:5000"
+            }
+    }
+
+    suspend fun saveBackendInstanceUrl(backendInstanceUrl: String) {
+        context.dataStore.edit { preferences ->
+            preferences[BACKEND_INSTANCE_URL] = backendInstanceUrl
+        }
+    }
+
+    fun getBackendAccessToken(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[BACKEND_ACCESS_TOKEN] ?: ""
+            }
+    }
+
+    suspend fun saveBackendAccessToken(backendAccessToken: String) {
+        context.dataStore.edit { preferences ->
+            preferences[BACKEND_ACCESS_TOKEN] = backendAccessToken
+        }
+    }
+
+    fun getBackendRefreshToken(): Flow<String> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[BACKEND_REFRESH_TOKEN] ?: ""
+            }
+    }
+
+    suspend fun saveBackendRefreshToken(backendRefreshToken: String) {
+        context.dataStore.edit { preferences ->
+            preferences[BACKEND_REFRESH_TOKEN] = backendRefreshToken
+        }
+    }
+
     fun getMoneroPayRequestInterval(): Flow<Int> {
         return context.dataStore.data
             .map { preferences ->
@@ -197,6 +254,19 @@ class DataStoreLocalDataSource @Inject constructor(
     suspend fun saveMoneroPayRequestInterval(moneroPayRequestInterval: Int) {
         context.dataStore.edit { preferences ->
             preferences[MONERO_PAY_REFRESH_INTERVAL] = moneroPayRequestInterval
+        }
+    }
+
+    fun getBackendRequestInterval(): Flow<Int> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[BACKEND_REFRESH_INTERVAL] ?: 5
+            }
+    }
+
+    suspend fun saveBackendRequestInterval(backendRequestInterval: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[BACKEND_REFRESH_INTERVAL] = backendRequestInterval
         }
     }
 
@@ -301,6 +371,12 @@ class DataStoreLocalDataSource @Inject constructor(
     suspend fun savePrinterPort(printerPort: Int) {
         context.dataStore.edit { preferences ->
             preferences[PRINTER_PORT] = printerPort
+        }
+    }
+
+    suspend fun clearDataStore() {
+        context.dataStore.edit { preferences ->
+            preferences.clear()
         }
     }
 

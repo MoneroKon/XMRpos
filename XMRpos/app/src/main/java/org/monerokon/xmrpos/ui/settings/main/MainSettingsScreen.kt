@@ -24,6 +24,7 @@ fun MainSettingsScreenRoot(viewModel: MainSettingsViewModel, navController: NavH
         navigateToSecurity = viewModel::navigateToSecurity,
         navigateToExportTransactions = viewModel::navigateToExportTransactions,
         navigateToMoneroPay = viewModel::navigateToMoneroPay,
+        navigateToBackend = viewModel::navigateToBackend,
         navigateToPrinterSettings = viewModel::navigateToPrinterSettings
     )
 }
@@ -37,6 +38,7 @@ fun MainSettingsScreen(
     navigateToSecurity: () -> Unit,
     navigateToExportTransactions: () -> Unit,
     navigateToMoneroPay: () -> Unit,
+    navigateToBackend: () -> Unit,
     navigateToPrinterSettings: () -> Unit
 ) {
     Scaffold(
@@ -74,6 +76,8 @@ fun MainSettingsScreen(
             SettingsCard(text = "Export transactions", onClick = {navigateToExportTransactions()})
             Spacer(modifier = Modifier.height(24.dp))
             SettingsCard(text = "MoneroPay", onClick = {navigateToMoneroPay()})
+            Spacer(modifier = Modifier.height(24.dp))
+            SettingsCard(text = "Backend", onClick = {navigateToBackend()})
             Spacer(modifier = Modifier.height(24.dp))
             SettingsCard(text = "Printer settings", onClick = {navigateToPrinterSettings()})
             Spacer(modifier = Modifier.height(24.dp))

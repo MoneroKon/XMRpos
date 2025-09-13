@@ -27,8 +27,12 @@ import org.monerokon.xmrpos.ui.payment.checkout.PaymentCheckoutScreenRoot
 import org.monerokon.xmrpos.ui.payment.checkout.PaymentCheckoutViewModel
 import org.monerokon.xmrpos.ui.payment.entry.PaymentEntryScreenRoot
 import org.monerokon.xmrpos.ui.payment.entry.PaymentEntryViewModel
+import org.monerokon.xmrpos.ui.payment.login.LoginScreenRoot
+import org.monerokon.xmrpos.ui.payment.login.LoginViewModel
 import org.monerokon.xmrpos.ui.payment.success.PaymentSuccessScreenRoot
 import org.monerokon.xmrpos.ui.payment.success.PaymentSuccessViewModel
+import org.monerokon.xmrpos.ui.settings.backend.BackendScreenRoot
+import org.monerokon.xmrpos.ui.settings.backend.BackendViewModel
 import org.monerokon.xmrpos.ui.settings.companyinformation.CompanyInformationScreenRoot
 import org.monerokon.xmrpos.ui.settings.companyinformation.CompanyInformationViewModel
 import org.monerokon.xmrpos.ui.settings.exporttransactions.ExportTransactionsScreenRoot
@@ -47,7 +51,7 @@ import org.monerokon.xmrpos.ui.settings.printersettings.PrinterSettingsViewModel
 @Composable
 fun NavGraphRoot(
     navController: NavHostController = rememberNavController(),
-    startDestination: PaymentEntry = PaymentEntry,
+    startDestination: Any,
 ) {
     Scaffold (modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
@@ -62,6 +66,10 @@ fun NavGraphRoot(
                 },
                 modifier = Modifier.padding(innerPadding)
             ) {
+                composable<Login> {
+                    val loginViewModel: LoginViewModel = hiltViewModel()
+                    LoginScreenRoot(viewModel = loginViewModel, navController = navController)
+                }
                 composable<PaymentEntry> {
                     val paymentEntryViewModel: PaymentEntryViewModel =  hiltViewModel()
                     PaymentEntryScreenRoot(
@@ -103,6 +111,10 @@ fun NavGraphRoot(
                     val moneroPayViewModel: MoneroPayViewModel = hiltViewModel()
                     MoneroPayScreenRoot(viewModel = moneroPayViewModel, navController = navController)
                 }
+                composable<Backend> {
+                    val backendViewModel: BackendViewModel = hiltViewModel()
+                    BackendScreenRoot(viewModel = backendViewModel, navController = navController)
+                }
                 composable<PrinterSettings> {
                     val printerSettingsViewModel: PrinterSettingsViewModel = hiltViewModel()
                     PrinterSettingsScreenRoot(viewModel = printerSettingsViewModel, navController = navController)
@@ -112,6 +124,9 @@ fun NavGraphRoot(
 
     }
 }
+
+@Serializable
+object Login
 
 @Serializable
 object PaymentEntry
@@ -152,6 +167,9 @@ object ExportTransactions
 
 @Serializable
 object MoneroPay
+
+@Serializable
+object Backend
 
 @Serializable
 object PrinterSettings

@@ -76,9 +76,9 @@ fun PaymentCheckoutScreen(
                 ) {
                     items(referenceFiatCurrencies.size) { index ->
                         CurrencyConverterCard(referenceFiatCurrencies[index], exchangeRates?.get(referenceFiatCurrencies[index]), paymentValue.toString(), targetXMRvalue = targetXMRvalue, elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), color = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface))
-                        if (index < referenceFiatCurrencies.size - 1) [
+                        if (index < referenceFiatCurrencies.size - 1) arrayOf(
                             HorizontalDivider()
-                        ]
+                        )
                     }
                 }
             }

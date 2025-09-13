@@ -14,7 +14,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionRequest
 import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayReceiveRequest
+import org.monerokon.xmrpos.data.repository.BackendRepository
 import org.monerokon.xmrpos.data.repository.DataStoreRepository
 import org.monerokon.xmrpos.data.repository.ExchangeRateRepository
 import org.monerokon.xmrpos.data.repository.HceRepository
@@ -34,6 +36,7 @@ import kotlin.math.pow
 class PaymentCheckoutViewModel @Inject constructor(
     private val exchangeRateRepository: ExchangeRateRepository,
     private val moneroPayRepository: MoneroPayRepository,
+    private val backendRepository: BackendRepository,
     private val hceRepository: HceRepository,
     private val dataStoreRepository: DataStoreRepository,
 ) : ViewModel() {
@@ -101,14 +104,17 @@ class PaymentCheckoutViewModel @Inject constructor(
     }
 
     private fun startMoneroPayReceive() {
-        val ipAddress = getDeviceIpAddress()
-        val callbackUUID = UUID.randomUUID().toString()
-        val moneroPayReceiveRequest = MoneroPayReceiveRequest(
-            (targetXMRvalue * 10.0.pow(12)).toLong(), "XMRPOS", "http://$ipAddress:8080?fiatValue=$paymentValue&callbackUUID=$callbackUUID"
-        )
+
         viewModelScope.launch(Dispatchers.IO) {
-            moneroPayRepository.updateCurrentCallback(callbackUUID, paymentValue);
-            val response = moneroPayRepository.startReceive(moneroPayReceiveRequest)
+            val backendCreateTransactionRequest = BackendCreateTransactionRequest(
+                (targetXMRvalue * 10.0.pow(12)).toLong(),
+                "XMRpos",
+                paymentValue,
+                primaryFiatCurrency,
+                dataStoreRepository.getBackendConfValue().first().split("-")[0].toInt()
+            )
+            /*moneroPayRepository.updateCurrentCallback(callbackUUID, paymentValue);*/
+            val response = backendRepository.createTransaction(backendCreateTransactionRequest)
 
             Log.i(logTag, "MoneroPay: $response")
 
@@ -118,34 +124,32 @@ class PaymentCheckoutViewModel @Inject constructor(
             } else if (response is DataResult.Success) {
 
                 address = response.data.address
-                qrCodeUri = "monero:${response.data.address}?tx_amount=${targetXMRvalue}&tx_description=${response.data.description}"
+                qrCodeUri = "monero:${response.data.address}?tx_amount=${targetXMRvalue}&tx_description=XMRpos"
+
+                backendRepository.observeCurrentTransactionUpdates(response.data.id)
 
                 hceRepository.updateUri(qrCodeUri)
             }
         }
     }
 
-    private fun getDeviceIpAddress(): String? {
-        return NetworkInterface.getNetworkInterfaces().toList()
-            .flatMap { it.inetAddresses.toList() }
-            .firstOrNull { it.isSiteLocalAddress }
-            ?.hostAddress
-    }
-
     private fun observePaymentStatus() {
         viewModelScope.launch {
-            moneroPayRepository.paymentStatus.collect { paymentCallback ->
-                paymentCallback?.let {
-                    stopReceive()
-                    navigateToPaymentSuccess(PaymentSuccess(
-                        fiatAmount = paymentValue,
-                        primaryFiatCurrency = primaryFiatCurrency,
-                        txId = it.transaction.tx_hash,
-                        xmrAmount = it.amount.covered.total / 10.0.pow(12),
-                        exchangeRate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0,
-                        timestamp = it.transaction.timestamp,
-                        showPrintReceipt = dataStoreRepository.getPrinterConnectionType().first() != "none"
-                    ))
+            backendRepository.currentTransactionStatus.collect {
+                if (it != null) {
+                    if (it.id == backendRepository.currentTransactionId)
+                    if (it.accepted) {
+                        backendRepository.currentTransactionId = null;
+                        navigateToPaymentSuccess(PaymentSuccess(
+                            fiatAmount = paymentValue,
+                            primaryFiatCurrency = primaryFiatCurrency,
+                            txId = it.subTransactions[0].txHash,
+                            xmrAmount = it.amount / 10.0.pow(12),
+                            exchangeRate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0,
+                            timestamp = it.updatedAt,
+                            showPrintReceipt = dataStoreRepository.getPrinterConnectionType().first() != "none"
+                        ))
+                    }
                 }
             }
         }

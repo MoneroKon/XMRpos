@@ -94,6 +94,14 @@ class DataStoreRepository @Inject constructor(
         dataStoreLocalDataSource.saveMoneroPayConfValue(moneroPayConfValue)
     }
 
+    fun getBackendConfValue(): Flow<String> {
+        return dataStoreLocalDataSource.getBackendConfValue()
+    }
+
+    suspend fun saveBackendConfValue(backendConfValue: String) {
+        dataStoreLocalDataSource.saveBackendConfValue(backendConfValue)
+    }
+
     fun getMoneroPayServerAddress(): Flow<String> {
         return dataStoreLocalDataSource.getMoneroPayServerAddress()
     }
@@ -102,12 +110,44 @@ class DataStoreRepository @Inject constructor(
         dataStoreLocalDataSource.saveMoneroPayServerAddress(moneroPayServerAddress)
     }
 
+    fun getBackendInstanceUrl(): Flow<String> {
+        return dataStoreLocalDataSource.getBackendInstanceUrl()
+    }
+
+    suspend fun saveBackendInstanceUrl(backendInstanceUrl: String) {
+        dataStoreLocalDataSource.saveBackendInstanceUrl(backendInstanceUrl)
+    }
+
+    fun getBackendAccessToken(): Flow<String> {
+        return dataStoreLocalDataSource.getBackendAccessToken()
+    }
+
+    suspend fun saveBackendAccessToken(backendAccessToken: String) {
+        dataStoreLocalDataSource.saveBackendAccessToken(backendAccessToken)
+    }
+
+    fun getBackendRefreshToken(): Flow<String> {
+        return dataStoreLocalDataSource.getBackendRefreshToken()
+    }
+
+    suspend fun saveBackendRefreshToken(backendRefreshToken: String) {
+        dataStoreLocalDataSource.saveBackendRefreshToken(backendRefreshToken)
+    }
+
     fun getMoneroPayRequestInterval(): Flow<Int> {
         return dataStoreLocalDataSource.getMoneroPayRequestInterval()
     }
 
     suspend fun saveMoneroPayRequestInterval(moneroPayRequestInterval: Int) {
         dataStoreLocalDataSource.saveMoneroPayRequestInterval(moneroPayRequestInterval)
+    }
+
+    fun getBackendRequestInterval(): Flow<Int> {
+        return dataStoreLocalDataSource.getBackendRequestInterval()
+    }
+
+    suspend fun saveBackendRequestInterval(backendRequestInterval: Int) {
+        dataStoreLocalDataSource.saveBackendRequestInterval(backendRequestInterval)
     }
 
     fun getPrinterConnectionType(): Flow<String> {
@@ -172,6 +212,10 @@ class DataStoreRepository @Inject constructor(
 
     suspend fun savePrinterPort(printerPort: Int) {
         dataStoreLocalDataSource.savePrinterPort(printerPort)
+    }
+
+    suspend fun clearDataStore() {
+        dataStoreLocalDataSource.clearDataStore()
     }
 
 }

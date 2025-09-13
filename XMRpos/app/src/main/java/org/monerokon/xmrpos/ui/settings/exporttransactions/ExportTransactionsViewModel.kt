@@ -12,6 +12,8 @@ import org.monerokon.xmrpos.data.local.room.model.Transaction
 import org.monerokon.xmrpos.data.repository.TransactionRepository
 import org.monerokon.xmrpos.ui.Settings
 import java.io.OutputStreamWriter
+import java.text.SimpleDateFormat
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -62,7 +64,8 @@ class ExportTransactionsViewModel @Inject constructor(
                         // Format xmrAmount to 12 decimal places
                         val formattedAmount = String.format("%.12f", entity.xmrAmount)
                         // Format timestamp to Koinly Date
-                        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        val inputFormat =
+                            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
                         val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.getDefault())
                         val date = inputFormat.parse(entity.timestamp)
                         val formattedDate = outputFormat.format(date)

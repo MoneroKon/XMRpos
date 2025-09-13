@@ -4,6 +4,7 @@ package org.monerokon.xmrpos.ui.settings.main
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
+import org.monerokon.xmrpos.ui.Backend
 import org.monerokon.xmrpos.ui.CompanyInformation
 import org.monerokon.xmrpos.ui.ExportTransactions
 import org.monerokon.xmrpos.ui.FiatCurrencies
@@ -42,6 +43,10 @@ class MainSettingsViewModel (private val savedStateHandle: SavedStateHandle): Vi
 
     fun navigateToMoneroPay() {
         navController?.navigate(MoneroPay)
+    }
+
+    fun navigateToBackend() {
+        navController?.navigate(Backend)
     }
 
     fun navigateToPrinterSettings() {
