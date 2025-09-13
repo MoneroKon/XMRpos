@@ -27,6 +27,7 @@ type createTransactionRequest struct {
 }
 
 type createTransactionResponse struct {
+	Id      uint   `json:"id"`
 	Address string `json:"address"`
 }
 
@@ -51,13 +52,14 @@ func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
 	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
 
-	address, err := h.service.CreateTransaction(*vendorIDPtr, *posIDPtr, req.Amount, req.Description, req.AmountInCurrency, req.Currency, req.RequiredConfirmations)
+	id, address, err := h.service.CreateTransaction(*vendorIDPtr, *posIDPtr, req.Amount, req.Description, req.AmountInCurrency, req.Currency, req.RequiredConfirmations)
 	if err != nil {
 		http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
 		return
 	}
 
 	resp := createTransactionResponse{
+		Id:      id,
 		Address: address,
 	}
 

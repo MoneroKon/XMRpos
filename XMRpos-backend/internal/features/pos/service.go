@@ -19,7 +19,7 @@ func NewPosService(repo PosRepository, cfg *config.Config, moneroPay *moneropay.
 	return &PosService{repo: repo, config: cfg, moneroPay: moneroPay}
 }
 
-func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, description *string, amountInCurrency float64, currency string, requiredConfirmations int64) (address string, err error) {
+func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, description *string, amountInCurrency float64, currency string, requiredConfirmations int64) (id uint, address string, err error) {
 
 	transaction := &models.Transaction{
 		VendorID:              vendorID,
@@ -33,7 +33,7 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 
 	transactionDB, err := s.repo.CreateTransaction(transaction)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	// Create a jwt token for the transaction which contains the transaction ID
@@ -44,7 +44,7 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 
 	accessToken, err := moneroPayTokenJWT.SignedString([]byte(s.config.JWTMoneroPaySecret))
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	callbackUrl := s.config.MoneroPayCallbackURL + "receive/" + accessToken
@@ -57,16 +57,16 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 
 	resp, err := s.moneroPay.PostReceive(req)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	// Update the transaction with the subaddress received from MoneroPay
 	transactionDB.SubAddress = &resp.Address
 	if _, err := s.repo.UpdateTransaction(transactionDB); err != nil {
-		return "", err
+		return 0, "", err
 	}
 
-	return resp.Address, nil
+	return transactionDB.ID, resp.Address, nil
 }
 
 // GetTransaction retrieves a transaction by its ID if authorized
