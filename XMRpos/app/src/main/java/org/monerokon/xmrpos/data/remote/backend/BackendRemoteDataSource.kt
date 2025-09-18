@@ -59,6 +59,15 @@ class BackendRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun fetchTransactionStatus(id: Int): DataResult<BackendTransactionStatusUpdate> {
+        return try {
+            val response = httpClient.get("pos/transaction/$id").body<BackendTransactionStatusUpdate>()
+            DataResult.Success(response)
+        } catch (e: Exception) {
+            DataResult.Failure(message = e.message ?: "Unknown error")
+        }
+    }
+
     fun observeTransactionStatus(
         id: Int,
         onSessionEstablished: suspend (session: DefaultClientWebSocketSession) -> Unit
@@ -69,7 +78,7 @@ class BackendRemoteDataSource @Inject constructor(
                     method = HttpMethod.Get,
                     request = {
                         url {
-                            protocol = URLProtocol.WSS // Use WSS for secure WebSockets
+                            protocol = URLProtocol.WSS
                             encodedPath = "/pos/ws/transaction?transaction_id=$id"
                         }
                     }
@@ -102,7 +111,7 @@ class BackendRemoteDataSource @Inject constructor(
                                 break
                             }
                             is Frame.Binary -> Log.d("WebSocketDS", "Received Binary frame (unhandled) for transaction $id")
-                            is Frame.Ping -> Log.d("WebSocketDS", "Received Ping frame for transaction $id") // Ktor handles Pong automatically
+                            is Frame.Ping -> Log.d("WebSocketDS", "Received Ping frame for transaction $id")
                             is Frame.Pong -> Log.d("WebSocketDS", "Received Pong frame for transaction $id")
                             else -> Log.d("WebSocketDS", "Received other frame type (unhandled) for transaction $id")
                         }
