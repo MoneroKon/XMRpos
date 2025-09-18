@@ -54,7 +54,7 @@ In the future a web interface should be created for easier usage. For now, you c
 1. **Login as admin**: Use the `/auth/login-admin` endpoint with admin credentials to obtain a JWT token.
 2. **Create an invite**: Use the `/admin/invite` endpoint to create a new invite code.
 3. **Register a vendor**: Use the `/auth/register` endpoint with the invite code to create a new vendor account.
-4. **Login vendor**: Use the `/auth/login` endpoint to obtain a JWT token.
+4. **Login vendor**: Use the `/auth/login-vendor` endpoint to obtain a JWT token.
 5. **Create POS**: Use the `/vendor/create-pos` endpoint to create a new POS account under the vendor.
 
 Now the POS account can be used with the XMRpos app.
