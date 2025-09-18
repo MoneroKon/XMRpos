@@ -2,6 +2,8 @@ package db
 
 import (
 	"fmt"
+	"time"
+
 	/* "log" */
 
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
@@ -61,6 +63,14 @@ func NewPostgresClient(cfg *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to target database: %w", err)
 	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying database: %w", err)
+	}
+	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(1 * time.Hour)
 
 	// Auto-migrate schemas
 	err = db.AutoMigrate(
