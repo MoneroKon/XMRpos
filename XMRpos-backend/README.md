@@ -47,6 +47,86 @@ Edit `.env` to set database credentials, JWT secrets, MoneroPay URLs, and wallet
 
 The server will start on the port specified in your `.env` file.
 
+## How to use it
+
+In the future a web interface should be created for easier usage. For now, you can use tools like Postman or curl to interact with the API.
+
+1. **Login as admin**: Use the `/auth/login-admin` endpoint with admin credentials to obtain a JWT token.
+2. **Create an invite**: Use the `/admin/invite` endpoint to create a new invite code.
+3. **Register a vendor**: Use the `/auth/register` endpoint with the invite code to create a new vendor account.
+4. **Login vendor**: Use the `/auth/login` endpoint to obtain a JWT token.
+5. **Create POS**: Use the `/vendor/create-pos` endpoint to create a new POS account under the vendor.
+
+Now the POS account can be used with the XMRpos app.
+
+To transfer the balance from the vendor account to the Monero wallet, use the `/vendor/transfer-balance` endpoint. It will not be instant and will group transfers to be able to payout more often. This should happen automatically around every 20 minutes.
+
+### Example: Login as admin
+
+**POST** `/auth/login-admin`
+
+```json
+{
+  "name": "admin",
+  "password": "admin"
+}
+```
+
+### Example: Create an invite
+
+**POST** `/admin/invite`
+
+```json
+{
+  "valid_until": "2025-12-31T23:59:59Z",
+  "forced_name": null
+}
+```
+
+### Example: Register a vendor
+
+**POST** `/vendor/create`
+
+```json
+{
+  "name": "vendor1",
+  "password": "yourStrongPassword",
+  "invite_code": "ac8eajc3j"
+}
+```
+
+### Example: Login vendor
+
+**POST** `/auth/login-vendor`
+
+```json
+{
+  "name": "vendor1",
+  "password": "yourStrongPassword"
+}
+```
+
+### Example: Create POS
+
+**POST** `/vendor/create-pos`
+
+```json
+{
+  "name": "pos1",
+  "password": "yourStrongPassword"
+}
+```
+
+### Example: Vendor initiate transfer
+
+**POST** `/vendor/transfer-balance`
+
+```json
+{
+  "address": "your_monero_address"
+}
+```
+
 ## API Overview
 
 - **Auth**: Login for vendors, POS, and admin.
