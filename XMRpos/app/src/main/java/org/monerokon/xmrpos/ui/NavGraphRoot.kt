@@ -41,8 +41,6 @@ import org.monerokon.xmrpos.ui.settings.fiatcurrencies.FiatCurrenciesScreenRoot
 import org.monerokon.xmrpos.ui.settings.fiatcurrencies.FiatCurrenciesViewModel
 import org.monerokon.xmrpos.ui.settings.main.MainSettingsScreenRoot
 import org.monerokon.xmrpos.ui.settings.main.MainSettingsViewModel
-import org.monerokon.xmrpos.ui.settings.moneropay.MoneroPayScreenRoot
-import org.monerokon.xmrpos.ui.settings.moneropay.MoneroPayViewModel
 import org.monerokon.xmrpos.ui.settings.moneropay.SecurityScreenRoot
 import org.monerokon.xmrpos.ui.settings.moneropay.SecurityViewModel
 import org.monerokon.xmrpos.ui.settings.printersettings.PrinterSettingsScreenRoot
@@ -107,10 +105,6 @@ fun NavGraphRoot(
                     val exportTransactionsViewModel: ExportTransactionsViewModel = hiltViewModel()
                     ExportTransactionsScreenRoot(viewModel = exportTransactionsViewModel, navController = navController)
                 }
-                composable<MoneroPay> {
-                    val moneroPayViewModel: MoneroPayViewModel = hiltViewModel()
-                    MoneroPayScreenRoot(viewModel = moneroPayViewModel, navController = navController)
-                }
                 composable<Backend> {
                     val backendViewModel: BackendViewModel = hiltViewModel()
                     BackendScreenRoot(viewModel = backendViewModel, navController = navController)
@@ -164,9 +158,6 @@ object Security
 
 @Serializable
 object ExportTransactions
-
-@Serializable
-object MoneroPay
 
 @Serializable
 object Backend

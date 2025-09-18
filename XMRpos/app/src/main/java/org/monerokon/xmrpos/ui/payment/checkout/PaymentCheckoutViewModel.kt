@@ -15,12 +15,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionRequest
-import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayReceiveRequest
 import org.monerokon.xmrpos.data.repository.BackendRepository
 import org.monerokon.xmrpos.data.repository.DataStoreRepository
 import org.monerokon.xmrpos.data.repository.ExchangeRateRepository
 import org.monerokon.xmrpos.data.repository.HceRepository
-import org.monerokon.xmrpos.data.repository.MoneroPayRepository
 import org.monerokon.xmrpos.shared.DataResult
 import org.monerokon.xmrpos.ui.PaymentEntry
 import org.monerokon.xmrpos.ui.PaymentSuccess
@@ -35,7 +33,6 @@ import kotlin.math.pow
 @HiltViewModel
 class PaymentCheckoutViewModel @Inject constructor(
     private val exchangeRateRepository: ExchangeRateRepository,
-    private val moneroPayRepository: MoneroPayRepository,
     private val backendRepository: BackendRepository,
     private val hceRepository: HceRepository,
     private val dataStoreRepository: DataStoreRepository,
@@ -99,11 +96,11 @@ class PaymentCheckoutViewModel @Inject constructor(
             Log.i(logTag, "Reference exchange rates: $referenceFiatCurrencies")
             Log.i(logTag, "Exchange rates: $exchangeRates")
 
-            startMoneroPayReceive()
+            startPayReceive()
         }
     }
 
-    private fun startMoneroPayReceive() {
+    private fun startPayReceive() {
 
         viewModelScope.launch(Dispatchers.IO) {
             val backendCreateTransactionRequest = BackendCreateTransactionRequest(
@@ -120,7 +117,7 @@ class PaymentCheckoutViewModel @Inject constructor(
 
             if (response is DataResult.Failure) {
                 errorMessage = response.message
-                moneroPayRepository.updateCurrentCallback(null, null)
+                stopReceive()
             } else if (response is DataResult.Success) {
 
                 address = response.data.address
@@ -176,7 +173,7 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     fun stopReceive() {
         hceRepository.updateUri("")
-        moneroPayRepository.stopReceive()
+        backendRepository.stopObservingTransactionUpdates()
     }
 
     fun resetErrorMessage() {

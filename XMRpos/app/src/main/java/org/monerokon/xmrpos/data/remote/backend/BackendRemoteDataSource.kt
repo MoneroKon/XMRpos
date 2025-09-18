@@ -26,11 +26,6 @@ import org.monerokon.xmrpos.data.remote.backend.model.BackendHealthResponse
 import org.monerokon.xmrpos.data.remote.backend.model.BackendLoginRequest
 import org.monerokon.xmrpos.data.remote.backend.model.BackendLoginResponse
 import org.monerokon.xmrpos.data.remote.backend.model.BackendTransactionStatusUpdate
-import org.monerokon.xmrpos.data.remote.moneroPay.MoneroPayApi
-import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayHealthResponse
-import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayReceiveRequest
-import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayReceiveResponse
-import org.monerokon.xmrpos.data.remote.moneroPay.model.MoneroPayReceiveStatusResponse
 import org.monerokon.xmrpos.di.MainKtorClient
 import org.monerokon.xmrpos.shared.DataResult
 import javax.inject.Inject
