@@ -17,7 +17,6 @@ import (
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/features/vendor"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/thirdparty/moneropay"
 
-	/* "github.com/monerokon/xmrpos/xmrpos-backend/internal/server/middleware/authmw" */
 	"gorm.io/gorm"
 )
 
@@ -100,14 +99,6 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 		r.Post("/pos/create-transaction", posHandler.CreateTransaction)
 		r.Get("/pos/transaction/{id}", posHandler.GetTransaction)
 		r.HandleFunc("/pos/ws/transaction", posHandler.TransactionWS)
-
-		/* // Device management
-		r.Post("/auth/register", authHandler.RegisterDevice) */
-
-		// Payment routes
-		/* r.Get("/balance", paymentHandler.GetBalance)
-		r.Post("/receive", paymentHandler.CreatePayment)
-		r.Get("/status/{id}", paymentHandler.GetPaymentStatus) */
 	})
 
 	return r
