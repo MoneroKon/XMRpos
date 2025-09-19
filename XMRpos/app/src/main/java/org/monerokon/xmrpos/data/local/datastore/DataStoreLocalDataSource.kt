@@ -7,9 +7,6 @@ import BACKEND_REFRESH_INTERVAL
 import BACKEND_REFRESH_TOKEN
 import COMPANY_NAME
 import CONTACT_INFORMATION
-import MONERO_PAY_CONF_VALUE
-import MONERO_PAY_REFRESH_INTERVAL
-import MONERO_PAY_SERVER_ADDRESS
 import PIN_CODE_ON_APP_START
 import PIN_CODE_OPEN_SETTINGS
 import PRIMARY_FIAT_CURRENCY
@@ -166,19 +163,6 @@ class DataStoreLocalDataSource @Inject constructor(
         }
     }
 
-    fun getMoneroPayConfValue(): Flow<String> {
-        return context.dataStore.data
-            .map { preferences ->
-                preferences[MONERO_PAY_CONF_VALUE] ?: "0-conf"
-            }
-    }
-
-    suspend fun saveMoneroPayConfValue(moneroPayConfValue: String) {
-        context.dataStore.edit { preferences ->
-            preferences[MONERO_PAY_CONF_VALUE] = moneroPayConfValue
-        }
-    }
-
     fun getBackendConfValue(): Flow<String> {
         return context.dataStore.data
             .map { preferences ->
@@ -189,19 +173,6 @@ class DataStoreLocalDataSource @Inject constructor(
     suspend fun saveBackendConfValue(backendConfValue: String) {
         context.dataStore.edit { preferences ->
             preferences[BACKEND_CONF_VALUE] = backendConfValue
-        }
-    }
-
-    fun getMoneroPayServerAddress(): Flow<String> {
-        return context.dataStore.data
-            .map { preferences ->
-                preferences[MONERO_PAY_SERVER_ADDRESS] ?: "http://192.168.1.100:5000"
-            }
-    }
-
-    suspend fun saveMoneroPayServerAddress(moneroPayServerAddress: String) {
-        context.dataStore.edit { preferences ->
-            preferences[MONERO_PAY_SERVER_ADDRESS] = moneroPayServerAddress
         }
     }
 
@@ -241,19 +212,6 @@ class DataStoreLocalDataSource @Inject constructor(
     suspend fun saveBackendRefreshToken(backendRefreshToken: String) {
         context.dataStore.edit { preferences ->
             preferences[BACKEND_REFRESH_TOKEN] = backendRefreshToken
-        }
-    }
-
-    fun getMoneroPayRequestInterval(): Flow<Int> {
-        return context.dataStore.data
-            .map { preferences ->
-                preferences[MONERO_PAY_REFRESH_INTERVAL] ?: 5
-            }
-    }
-
-    suspend fun saveMoneroPayRequestInterval(moneroPayRequestInterval: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[MONERO_PAY_REFRESH_INTERVAL] = moneroPayRequestInterval
         }
     }
 

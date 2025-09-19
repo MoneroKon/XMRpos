@@ -6,7 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO // Or your preferred Ktor engine (OkHttp, Android)
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BearerTokens
@@ -83,7 +83,7 @@ object BackendModule {
     fun provideRefreshKtorClient(
         json: Json
     ): HttpClient {
-        return HttpClient(CIO) { // Or your preferred engine
+        return HttpClient(CIO) {
             expectSuccess = false // Handle success/failure manually in refreshTokens block
             install(ContentNegotiation) {
                 json(json)
@@ -109,36 +109,25 @@ object BackendModule {
         authRepository: AuthRepository,
         @RefreshKtorClient refreshClient: HttpClient // Inject the refresh client
     ): HttpClient {
-        return HttpClient(CIO) { // Or OkHttp engine if you prefer/need its features
-            expectSuccess = true // Ktor will throw exceptions for non-2xx responses by default
+        return HttpClient(CIO) {
+            expectSuccess = true
 
-            // Default request configuration: applied to every request made by this client
             install(DefaultRequest) {
-                contentType(ContentType.Application.Json) // Default content type for requests
+                contentType(ContentType.Application.Json)
 
-                // THIS IS THE KEY for dynamic base URL:
-                // This block is executed for each request.
-                // It fetches the LATEST backend URL from DataStore.
-                // runBlocking is used here because DefaultRequest builder is not suspendable.
-                // This is generally acceptable if DataStore read is fast.
                 val currentBackendUrl = runBlocking {
                     dataStoreRepository.getBackendInstanceUrl().firstOrNull()
                 }
 
                 if (currentBackendUrl != null && currentBackendUrl.isNotBlank()) {
-                    url.takeFrom(currentBackendUrl) // Apply protocol, host, port from stored URL
-                    // The path will be appended from the actual request (e.g., client.get("some/path"))
+                    url.takeFrom(currentBackendUrl)
                 } else {
-                    // Handle case where URL is not yet set (e.g., before first login)
-                    // Option A: Let requests fail (they shouldn't be made before login if URL is mandatory)
-                    // Option B: Set a dummy URL that will clearly indicate an error
                     android.util.Log.w("MainKtorClient", "Backend URL not set in DefaultRequest!")
-                    // url.takeFrom("http://url.not.set.yet.for.api") // Example dummy
                 }
             }
 
             install(ContentNegotiation) {
-                json(json) // Use the centrally configured Json instance
+                json(json)
             }
 
             install(Logging) {
@@ -147,7 +136,7 @@ object BackendModule {
                         android.util.Log.d("MainKtorClient", message)
                     }
                 }
-                level = LogLevel.ALL // Adjust log level as needed (BODY, HEADERS, etc.)
+                level = LogLevel.ALL
             }
 
             install(WebSockets)
@@ -177,18 +166,17 @@ object BackendModule {
                         val backendUrlForRefresh = runBlocking { dataStoreRepository.getBackendInstanceUrl().firstOrNull() }
                         if (backendUrlForRefresh.isNullOrBlank()) {
                             android.util.Log.e("MainKtorClientAuth", "Cannot refresh token: Backend URL is not set.")
-                            return@refreshTokens null // Cannot refresh without URL
+                            return@refreshTokens null
                         }
 
-                        // Use the @RefreshKtorClient which does NOT have the Auth plugin or DefaultRequest for base URL
                         val authTokenResponse: AuthTokenResponse? = try {
-                            val response = refreshClient.post { // Use the dedicated refreshClient
+                            val response = refreshClient.post {
                                 url {
-                                    takeFrom(backendUrlForRefresh) // Set the full base URL for this specific call
-                                    appendPathSegments("auth", "refresh") // Your refresh token path
+                                    takeFrom(backendUrlForRefresh)
+                                    appendPathSegments("auth", "refresh")
                                 }
                                 header(HttpHeaders.ContentType, ContentType.Application.Json)
-                                setBody(mapOf("refresh_token" to currentRefreshToken)) // Adjust payload as needed
+                                setBody(mapOf("refresh_token" to currentRefreshToken))
                             }
                             if (response.status.value in 200..299) {
                                 response.body<AuthTokenResponse>()
@@ -211,11 +199,6 @@ object BackendModule {
                             null
                         }
                     }
-
-                    // Optional: Configure when to send tokens
-                    // sendWithoutRequest { request ->
-                    //    request.url.host == "your.api.host.from.datastore" // Only send for your API
-                    // }
                 }
             }
         }

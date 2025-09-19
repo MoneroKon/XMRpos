@@ -86,28 +86,12 @@ class DataStoreRepository @Inject constructor(
         dataStoreLocalDataSource.savePinCodeOpenSettings(pinCodeOnOpenSettings)
     }
 
-    fun getMoneroPayConfValue(): Flow<String> {
-        return dataStoreLocalDataSource.getMoneroPayConfValue()
-    }
-
-    suspend fun saveMoneroPayConfValue(moneroPayConfValue: String) {
-        dataStoreLocalDataSource.saveMoneroPayConfValue(moneroPayConfValue)
-    }
-
     fun getBackendConfValue(): Flow<String> {
         return dataStoreLocalDataSource.getBackendConfValue()
     }
 
     suspend fun saveBackendConfValue(backendConfValue: String) {
         dataStoreLocalDataSource.saveBackendConfValue(backendConfValue)
-    }
-
-    fun getMoneroPayServerAddress(): Flow<String> {
-        return dataStoreLocalDataSource.getMoneroPayServerAddress()
-    }
-
-    suspend fun saveMoneroPayServerAddress(moneroPayServerAddress: String) {
-        dataStoreLocalDataSource.saveMoneroPayServerAddress(moneroPayServerAddress)
     }
 
     fun getBackendInstanceUrl(): Flow<String> {
@@ -132,14 +116,6 @@ class DataStoreRepository @Inject constructor(
 
     suspend fun saveBackendRefreshToken(backendRefreshToken: String) {
         dataStoreLocalDataSource.saveBackendRefreshToken(backendRefreshToken)
-    }
-
-    fun getMoneroPayRequestInterval(): Flow<Int> {
-        return dataStoreLocalDataSource.getMoneroPayRequestInterval()
-    }
-
-    suspend fun saveMoneroPayRequestInterval(moneroPayRequestInterval: Int) {
-        dataStoreLocalDataSource.saveMoneroPayRequestInterval(moneroPayRequestInterval)
     }
 
     fun getBackendRequestInterval(): Flow<Int> {

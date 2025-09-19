@@ -57,7 +57,6 @@ class PaymentCheckoutViewModel @Inject constructor(
     var exchangeRates: Map<String, Double>? by mutableStateOf(null)
     var targetXMRvalue by mutableStateOf(0.0)
 
-    var moneroPayServerAddress by mutableStateOf("")
     var qrCodeUri by mutableStateOf("")
     var address by mutableStateOf("")
     var errorMessage by mutableStateOf("")
