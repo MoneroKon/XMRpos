@@ -1,0 +1,22 @@
+services:
+  android-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ANDROID_API_LEVEL: 35
+        BUILD_TOOLS_VERSION: 35.0.0
+    environment:
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      GRADLE_USER_HOME: /home/gradle-cache
+      JAVA_TOOL_OPTIONS: "-Xmx1g -XX:MaxMetaspaceSize=512m"
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx1g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8'"
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - gradle-cache:/home/gradle-cache
+      - android-sdk:/opt/android-sdk
+volumes:
+  gradle-cache:
+  android-sdk:

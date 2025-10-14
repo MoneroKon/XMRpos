@@ -108,6 +108,23 @@ Alternatively, you can build the APK using the terminal:
 ```
 The APK will be available in the app/build/outputs/apk/ directory.
 
+# Building XMRpos with Docker
+
+## Prerequisites
+- Docker Engine ≥ 24
+- Docker Compose plugin
+- 8 GB RAM and ~10 GB free disk space
+- Add User to `docker` group
+
+```bash
+git clone https://github.com/MoneroKon/XMRpos
+cd XMRpos/XMRpos
+docker compose build --no-cache
+docker compose up --abort-on-container-exit
+```
+
+The APK will be created at `app/build/outputs/apk/debug/app-debug.apk`.
+
 # Donate XMR
 
 **Address**:
