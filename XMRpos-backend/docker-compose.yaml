@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      MONEROPAY_BASE_URL: ${MONEROPAY_BASE_URL:-http://host.docker.internal:5000}
+      MONEROPAY_CALLBACK_URL: ${MONEROPAY_CALLBACK_URL:-http://backend:8080/callback/}
+      MONERO_WALLET_RPC_ENDPOINT: ${MONERO_WALLET_RPC_ENDPOINT:-http://host.docker.internal:18083/json_rpc}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - xmrnet
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-xmrpos}
+      POSTGRES_USER: ${DB_USER:-xmrpos}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-xmrposPassword}
+    ports:
+      - "55432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - xmrnet
+
+networks:
+  xmrnet:
+
+volumes:
+  db_data:
