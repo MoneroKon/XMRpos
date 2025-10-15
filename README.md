@@ -123,6 +123,18 @@ docker compose build --no-cache
 docker compose up --abort-on-container-exit
 ```
 
+### From prebuilt image
+
+```bash
+git clone https://github.com/MoneroKon/XMRpos
+cd XMRpos/XMRpos
+docker run --rm \
+  -v "$PWD":/workspace \
+  -v xmrpos-gradle:/home/gradle-cache \
+  -v xmrpos-android-sdk:/opt/android-sdk \
+  ghcr.io/ajs-xmr/xmrpos-android-builder:df7af4d
+```
+
 The APK will be created at `app/build/outputs/apk/debug/app-debug.apk`.
 
 # Donate XMR
