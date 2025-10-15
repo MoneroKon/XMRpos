@@ -1,0 +1,90 @@
+name: PR XMRpos Debug APK build
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/build') &&
+      github.actor == 'ajs-xmr'
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/ajs-xmr/xmrpos-android-builder:df7af4d
+
+    env:
+      GRADLE_USER_HOME: /home/gradle-cache
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      JAVA_TOOL_OPTIONS: "-Xmx1g -XX:MaxMetaspaceSize=512m"
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx1g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8'"
+
+    steps:
+      - name: Resolve PR head
+        id: prmeta
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const number = context.payload.issue.number;
+            const pr = await github.rest.pulls.get({owner, repo, pull_number: number});
+            core.setOutput('head_repo', pr.data.head.repo.full_name);
+            core.setOutput('head_ref', pr.data.head.ref);
+            core.setOutput('pr_number', number);
+
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.prmeta.outputs.head_repo }}
+          ref: ${{ steps.prmeta.outputs.head_ref }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Cache Gradle (matches GRADLE_USER_HOME in container)
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/gradle-cache
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build debug APK
+        run: |
+          chmod +x ./gradlew || true
+          ./gradlew --no-daemon clean assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: XMRpos-APK-pr${{ steps.prmeta.outputs.pr_number }}
+          path: |
+            **/build/outputs/apk/**/*.apk
+            **/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
+      - name: Comment link to build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(`${{ steps.prmeta.outputs.pr_number }}`),
+              body: `Build started by @${context.actor} via \`/build\`.\n\nDownload the APK from the run artifacts: ${url}`
+            });
