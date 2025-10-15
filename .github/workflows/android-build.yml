@@ -24,6 +24,7 @@ jobs:
       image: ghcr.io/ajs-xmr/xmrpos-android-builder:df7af4d
 
     env:
+      PROJECT_DIR: XMRpos
       GRADLE_USER_HOME: /home/gradle-cache
       ANDROID_HOME: /opt/android-sdk
       ANDROID_SDK_ROOT: /opt/android-sdk
@@ -57,22 +58,30 @@ jobs:
           path: |
             /home/gradle-cache
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles(format('{0}/**/*.gradle*', env.PROJECT_DIR), format('{0}/**/gradle-wrapper.properties', env.PROJECT_DIR)) }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Build debug APK
+      - name: Ensure Gradle wrapper
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          chmod +x ./gradlew || true
-          ./gradlew --no-daemon clean assembleDebug
+          if [ ! -f gradlew ]; then
+            echo "Gradle wrapper missing. Bootstrapping…"
+            /opt/gradle-8.9/bin/gradle wrapper --gradle-version 8.9 --distribution-type bin
+          fi
+          chmod +x ./gradlew
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: ./gradlew --no-daemon assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: XMRpos-APK-pr${{ steps.prmeta.outputs.pr_number }}
           path: |
-            **/build/outputs/apk/**/*.apk
-            **/outputs/apk/**/*.apk
+            ${{ env.PROJECT_DIR }}/**/build/outputs/apk/**/*.apk
+            ${{ env.PROJECT_DIR }}/**/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 7
           compression-level: 9
