@@ -75,7 +75,7 @@ class DataStoreLocalDataSource @Inject constructor(
     fun getPrimaryFiatCurrency(): Flow<String> {
         return context.dataStore.data
             .map { preferences ->
-                preferences[PRIMARY_FIAT_CURRENCY] ?: "USD"
+                preferences[PRIMARY_FIAT_CURRENCY] ?: "EUR"
             }
     }
 
@@ -89,7 +89,7 @@ class DataStoreLocalDataSource @Inject constructor(
         return context.dataStore.data
             .map { preferences ->
                 val joinedString: String? = preferences[REFERENCE_FIAT_CURRENCIES]
-                if (joinedString != null && joinedString.toString() != "") joinedString.split(",") else if (joinedString.toString() == "") emptyList() else listOf("EUR", "CZK", "MXN")
+                if (joinedString != null && joinedString.toString() != "") joinedString.split(",") else if (joinedString.toString() == "") emptyList() else listOf("CZK", "USD")
             }
     }
 
