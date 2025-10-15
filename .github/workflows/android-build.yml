@@ -63,11 +63,11 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Ensure Gradle wrapper
+        shell: bash
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          pwd && ls -la && ls -la ${{ env.PROJECT_DIR }} || true
           set -euo pipefail
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+          if [[ ! -f gradle/wrapper/gradle-wrapper.jar ]]; then
             echo "gradle-wrapper.jar missing. Bootstrapping Gradle 8.9..."
             /opt/gradle-8.9/bin/gradle wrapper --gradle-version 8.9 --distribution-type bin
           fi
