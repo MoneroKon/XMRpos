@@ -65,15 +65,14 @@ jobs:
       - name: Ensure Gradle wrapper
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          if [ ! -f gradlew ]; then
-            echo "Gradle wrapper missing. Bootstrapping…"
+          pwd && ls -la && ls -la ${{ env.PROJECT_DIR }} || true
+          set -euo pipefail
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "gradle-wrapper.jar missing. Bootstrapping Gradle 8.9..."
             /opt/gradle-8.9/bin/gradle wrapper --gradle-version 8.9 --distribution-type bin
           fi
-          chmod +x ./gradlew
-
-      - name: Build debug APK
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: ./gradlew --no-daemon assembleDebug
+          chmod +x ./gradlew || true
+          ./gradlew --no-daemon --max-workers=2 -Pkotlin.daemon.jvm.options=-Xmx512m assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
