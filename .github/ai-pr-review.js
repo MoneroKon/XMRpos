@@ -60,23 +60,28 @@ function sanitizeLLM(text = "") {
 }
 
 async function callLLM(model, messages, max_tokens = 1200, temperature = 0.2) {
+  const body = { model, messages, temperature, max_tokens };
+
   const res = await fetch(`${HYPERBOLIC_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${HYPERBOLIC_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens,
-      stop: ["<think>", "</think>", "Thought:", "Chain-of-thought:", "Reasoning:", "Thinking:"],
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
   const json = await res.json();
-  const raw = json.choices?.[0]?.message?.content?.trim() || "";
+
+  let raw = json.choices?.[0]?.message?.content?.trim() || "";
+
+  if (/deepseek/i.test(model)) {
+    if (raw.includes("</think>")) {
+      raw = raw.split("</think>").pop();
+    }
+    raw = raw.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  }
+
   return sanitizeLLM(raw);
 }
 
