@@ -25,17 +25,15 @@ jobs:
       MODEL_REVIEW: Qwen/Qwen2.5-Coder-32B-Instruct
 
     steps:
-      # Do NOT checkout PR code. Keep the runner clean of untrusted code.
-
       - name: Setup Node
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
           node-version: 20
 
       - name: Assert secrets present
         run: |
           if [ -z "${HYPERBOLIC_API_KEY}" ]; then
-            echo "HYPERBOLIC_API_KEY missing (secrets are available on pull_request_target). Add it under Settings > Secrets > Actions." >&2
+            echo "HYPERBOLIC_API_KEY missing" >&2
             exit 1
           fi
 
@@ -43,7 +41,6 @@ jobs:
         run: |
           npm -y init
           npm i node-fetch@3 @octokit/rest@20
-          # Silence ESM warning
           node -e "const f='package.json';const j=require('fs').readFileSync(f,'utf8');const o=JSON.parse(j);o.type='module';require('fs').writeFileSync(f,JSON.stringify(o,null,2));"
 
       - name: Prepare workspace
@@ -78,7 +75,6 @@ jobs:
 
           const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
-          // Fetch unified diff and file list from API (safe for forks)
           const diffResp = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
             owner, repo, pull_number: prNumber,
             headers: { accept: "application/vnd.github.v3.diff" },
@@ -94,27 +90,27 @@ jobs:
           const chunk = (t, n=12000)=>{ const a=[]; for(let i=0;i<t.length;i+=n)a.push(t.slice(i,i+n)); return a; };
           const chunks = chunk(diff);
 
-          async function chat(model, messages, max_tokens=1200, temperature=0.2) {
+          async function callLLM(model, messages, max_tokens=1200, temperature=0.2) {
             const res = await fetch(`${HYPERBOLIC_BASE_URL}/chat/completions`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${HYPERBOLIC_API_KEY}`,
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                model, messages, temperature, max_tokens,
-                stop: ["<think>", "</think>", "Thought:", "Chain-of-thought:", "Reasoning:", "Thinking:"]
-              })
+              body: JSON.stringify({ model, messages, temperature, max_tokens })
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
             const j = await res.json();
-            let txt = j.choices?.[0]?.message?.content?.trim() ?? "";
-            txt = txt.replace(/<think>[\s\S]*?<\/think>/gi, "");
-            txt = txt.replace(/^\s*(?:Thought|Chain-of-thought|Reasoning|Thinking):.*$/gim, "");
-            return txt.trim().replace(/\n{3,}/g, "\n\n");
+            let raw = (j.choices?.[0]?.message?.content ?? "").trim();
+            const m = raw.match(/<final>\s*([\s\S]*?)\s*<\/final>/i);
+            if (m) raw = m[1].trim();
+            if (/deepseek/i.test(model)) {
+              if (!m && raw.includes("</think>")) raw = raw.split("</think>").pop();
+              raw = raw.replace(/<think>[\s\S]*?<\/think>/gi, "");
+            }
+            return raw.replace(/\n{3,}/g, "\n\n").trim();
           }
 
-          // Stage A: summary/plan
           const planPrompt = `
           Summarize this pull request:
           - Purpose and intent
@@ -126,12 +122,11 @@ jobs:
           Files:
           ${fileList}
           `;
-          const plan = await chat(MODEL_SUMMARY, [
-            { role: "system", content: "You are a senior engineer producing structured summaries." },
+          const plan = await callLLM(MODEL_SUMMARY, [
+            { role: "system", content: "You are a senior engineer producing structured summaries. Return only the final answer wrapped in <final>...</final>. Do not include chain-of-thought." },
             { role: "user", content: planPrompt },
           ], 900, 0.1);
 
-          // Stage B: detailed review
           const reviews = [];
           for (let i=0;i<chunks.length;i++){
             const prompt = `
@@ -144,8 +139,8 @@ jobs:
             ${chunks[i]}
             `;
             try {
-              const out = await chat(MODEL_REVIEW, [
-                { role: "system", content: "You are a rigorous code reviewer. Be terse and specific." },
+              const out = await callLLM(MODEL_REVIEW, [
+                { role: "system", content: "You are a rigorous code reviewer. Be terse and specific. Return only the final answer wrapped in <final>...</final>. Do not include hidden reasoning." },
                 { role: "user", content: prompt },
               ], 1400, 0.1);
               reviews.push(`### Chunk ${i+1}\n${out}`);
@@ -154,20 +149,20 @@ jobs:
             }
           }
 
-          // Synthesis
-          const synthesis = await chat(MODEL_SUMMARY, [
-            { role: "system", content: "Merge and dedupe findings. Sections: Summary, Key Findings, Risks, Suggestions, Tests to Add. Keep short." },
+          const synthesis = await callLLM(MODEL_SUMMARY, [
+            { role: "system", content: "Merge and dedupe findings. Sections: Summary, Key Findings, Risks, Suggestions, Tests to Add. Keep short. Return only the final answer wrapped in <final>...</final>. No chain-of-thought." },
             { role: "user", content: reviews.join("\n\n") },
           ], 1200, 0.15);
 
-          // Post comments
+          const safe = s => (s && s.trim()) ? s.trim() : "(model returned no visible content)";
+
           await octokit.issues.createComment({
             owner, repo, issue_number: prNumber,
-            body: `🤖 **AI PR Summary** (model: \`${MODEL_SUMMARY}\`)\n\n${plan}`
+            body: `🤖 **AI PR Summary** (model: \`${MODEL_SUMMARY}\`)\n\n${safe(plan)}`
           });
           await octokit.issues.createComment({
             owner, repo, issue_number: prNumber,
-            body: `🤖 **AI Code Review** (model: \`${MODEL_REVIEW}\`)\n\n${synthesis}`
+            body: `🤖 **AI Code Review** (model: \`${MODEL_REVIEW}\`)\n\n${safe(synthesis)}`
           });
 
           console.log("Two-stage AI review posted.");
