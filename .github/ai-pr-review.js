@@ -9,7 +9,7 @@ const {
   HYPERBOLIC_API_KEY,
   HYPERBOLIC_BASE_URL = "https://api.hyperbolic.xyz/v1",
   MODEL_SUMMARY = "deepseek-ai/DeepSeek-R1-0528",
-  MODEL_REVIEW  = "qwen/Qwen3-Coder-480B-A35B-Instruct",
+  MODEL_REVIEW  = "Qwen/Qwen2.5-Coder-32B-Instruct",
 } = process.env;
 
 if (!HYPERBOLIC_API_KEY) {
@@ -53,6 +53,12 @@ async function listFiles() {
 }
 
 // --- Call Hyperbolic API ---
+function sanitizeLLM(text = "") {
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  text = text.replace(/^\s*(?:Thought|Chain-of-thought|Reasoning|Thinking):.*$/gim, "");
+  return text.trim().replace(/\n{3,}/g, "\n\n");
+}
+
 async function callLLM(model, messages, max_tokens = 1200, temperature = 0.2) {
   const res = await fetch(`${HYPERBOLIC_BASE_URL}/chat/completions`, {
     method: "POST",
@@ -60,11 +66,18 @@ async function callLLM(model, messages, max_tokens = 1200, temperature = 0.2) {
       Authorization: `Bearer ${HYPERBOLIC_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model, messages, temperature, max_tokens }),
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens,
+      stop: ["<think>", "</think>", "Thought:", "Chain-of-thought:", "Reasoning:", "Thinking:"],
+    }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
   const json = await res.json();
-  return json.choices?.[0]?.message?.content?.trim() || "";
+  const raw = json.choices?.[0]?.message?.content?.trim() || "";
+  return sanitizeLLM(raw);
 }
 
 function chunk(text, size = 12000) {

@@ -22,7 +22,7 @@ jobs:
       HYPERBOLIC_API_KEY: ${{ secrets.HYPERBOLIC_API_KEY }}
       HYPERBOLIC_BASE_URL: https://api.hyperbolic.xyz/v1
       MODEL_SUMMARY: deepseek-ai/DeepSeek-R1-0528
-      MODEL_REVIEW: qwen/Qwen3-Coder-480B-A35B-Instruct
+      MODEL_REVIEW: Qwen/Qwen2.5-Coder-32B-Instruct
 
     steps:
       # Do NOT checkout PR code. Keep the runner clean of untrusted code.
@@ -65,7 +65,7 @@ jobs:
             HYPERBOLIC_API_KEY,
             HYPERBOLIC_BASE_URL = "https://api.hyperbolic.xyz/v1",
             MODEL_SUMMARY = "deepseek-ai/DeepSeek-R1-0528",
-            MODEL_REVIEW  = "qwen/Qwen3-Coder-480B-A35B-Instruct",
+            MODEL_REVIEW  = "Qwen/Qwen2.5-Coder-32B-Instruct",
           } = process.env;
 
           if (!HYPERBOLIC_API_KEY) { console.error("HYPERBOLIC_API_KEY is empty"); process.exit(1); }
@@ -101,11 +101,17 @@ jobs:
                 Authorization: `Bearer ${HYPERBOLIC_API_KEY}`,
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ model, messages, temperature, max_tokens })
+              body: JSON.stringify({
+                model, messages, temperature, max_tokens,
+                stop: ["<think>", "</think>", "Thought:", "Chain-of-thought:", "Reasoning:", "Thinking:"]
+              })
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
             const j = await res.json();
-            return j.choices?.[0]?.message?.content?.trim() ?? "";
+            let txt = j.choices?.[0]?.message?.content?.trim() ?? "";
+            txt = txt.replace(/<think>[\s\S]*?<\/think>/gi, "");
+            txt = txt.replace(/^\s*(?:Thought|Chain-of-thought|Reasoning|Thinking):.*$/gim, "");
+            return txt.trim().replace(/\n{3,}/g, "\n\n");
           }
 
           // Stage A: summary/plan
