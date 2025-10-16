@@ -53,6 +53,7 @@ jobs:
           cat > .github/ai-pr-review.js <<'EOF'
           import { Octokit } from "@octokit/rest";
           import fs from "node:fs";
+          import fetch from "node-fetch";
 
           const {
             GITHUB_REPOSITORY,
@@ -138,9 +139,9 @@ jobs:
                 { role: "system", content: "You are a rigorous code reviewer. Be terse and specific." },
                 { role: "user", content: prompt },
               ], 1400, 0.1);
-              reviews.push(\`### Chunk ${i+1}\n\${out}\`);
+              reviews.push(`### Chunk ${i+1}\n${out}`);
             } catch(e){
-              reviews.push(\`### Chunk ${i+1}\nLLM error: \${e.message}\`);
+              reviews.push(`### Chunk ${i+1}\nLLM error: ${e.message}`);
             }
           }
 
