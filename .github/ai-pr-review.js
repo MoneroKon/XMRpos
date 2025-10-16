@@ -8,7 +8,7 @@ const {
   GITHUB_TOKEN,
   HYPERBOLIC_API_KEY,
   HYPERBOLIC_BASE_URL = "https://api.hyperbolic.xyz/v1",
-  MODEL_SUMMARY = "deepseek-ai/DeepSeek-R1-0528",
+  MODEL_SUMMARY = "Qwen/Qwen2.5-Coder-32B-Instruct",
   MODEL_REVIEW = "Qwen/Qwen2.5-Coder-32B-Instruct",
 } = process.env;
 
@@ -87,8 +87,6 @@ const planPrompt = `
 Summarize this pull request:
 - Purpose and intent
 - Key files changed
-- Risks, side effects, or performance/security implications
-- Which files need detailed review
 
 Title: ${event.pull_request.title}
 Body: ${event.pull_request.body || "(no description)"}
@@ -97,9 +95,9 @@ ${fileList}
 `;
 
 const plan = await callLLM(MODEL_SUMMARY, [
-  { role: "system", content: "You are a senior software engineer producing concise, structured summaries. Return only the final answer wrapped in <final>...</final>. Do not include chain-of-thought." },
+  { role: "system", content: "You are a senior software engineer. Return only <final>...</final> with exactly four sections titled: Purpose, Key Files, Risks, Deep Review. Use bullet points. Max 4 bullets per section. Max 12 words per bullet. No preamble. No meta commentary. No repetition." },
   { role: "user", content: planPrompt },
-], 900, 0.1);
+], 500, 0.1);
 
 const reviews = [];
 for (let i = 0; i < chunks.length; i++) {
@@ -118,7 +116,7 @@ ${chunks[i]}
     const text = await callLLM(MODEL_REVIEW, [
       { role: "system", content: "You are a rigorous code reviewer. Respond with terse, actionable feedback. Return only the final answer wrapped in <final>...</final>. Do not include hidden reasoning." },
       { role: "user", content: prompt },
-    ], 1400, 0.15);
+    ], 1500, 0.15);
     reviews.push(`### Chunk ${i + 1}\n${text}`);
   } catch (e) {
     reviews.push(`### Chunk ${i + 1}\nError: ${e.message}`);
@@ -126,9 +124,9 @@ ${chunks[i]}
 }
 
 const synthesis = await callLLM(MODEL_SUMMARY, [
-  { role: "system", content: "Merge and deduplicate findings. Output short sections: Summary, Key Issues, Recommendations, Suggested Tests. Return only the final answer wrapped in <final>...</final>. No chain-of-thought." },
+  { role: "system", content: "Merge and deduplicate findings. Return only <final>...</final> with sections: Summary, Key Issues, Recommendations. Use bullet points. Max 5 bullets per section. Max 12 words per bullet. No preamble. No meta commentary." },
   { role: "user", content: reviews.join("\n\n") },
-], 1200, 0.15);
+], 600, 0.15);
 
 const safe = s => (s && s.trim()) ? s.trim() : "(model returned no visible content)";
 
