@@ -46,6 +46,9 @@ jobs:
           # Silence ESM warning
           node -e "const f='package.json';const j=require('fs').readFileSync(f,'utf8');const o=JSON.parse(j);o.type='module';require('fs').writeFileSync(f,JSON.stringify(o,null,2));"
 
+      - name: Prepare workspace
+        run: mkdir -p .github
+
       - name: Run PR AI Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
