@@ -73,8 +73,13 @@ class BackendRemoteDataSource @Inject constructor(
                     method = HttpMethod.Get,
                     request = {
                         url {
-                            protocol = URLProtocol.WSS
-                            encodedPath = "/pos/ws/transaction?transaction_id=$id"
+                            protocol = when (protocol) {
+                                URLProtocol.HTTPS -> URLProtocol.WSS
+                                URLProtocol.HTTP  -> URLProtocol.WS
+                                else -> protocol
+                            }
+                            encodedPath = "/pos/ws/transaction"
+                            parameters.append("transaction_id", id.toString())
                         }
                     }
                 ) {
