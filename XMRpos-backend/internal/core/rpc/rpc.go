@@ -2,8 +2,10 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -43,7 +45,7 @@ type rpcResponse struct {
 }
 
 // Call sends a JSON-RPC request and unmarshals the result into the provided result pointer.
-func (c *Client) Call(method string, params interface{}, result interface{}) error {
+func (c *Client) Call(ctx context.Context, method string, params interface{}, result interface{}) error {
 	reqBody, err := json.Marshal(rpcRequest{
 		Jsonrpc: "2.0",
 		ID:      "0",
@@ -55,7 +57,10 @@ func (c *Client) Call(method string, params interface{}, result interface{}) err
 		return err
 	}
 
-	req, err := http.NewRequest("POST", c.Endpoint, bytes.NewBuffer(reqBody))
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Endpoint, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Printf("[RPC] Error creating HTTP request: %v", err)
 		return err
@@ -70,7 +75,10 @@ func (c *Client) Call(method string, params interface{}, result interface{}) err
 		log.Printf("[RPC] HTTP request error: %v", err)
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 
 	var rpcResp rpcResponse
 	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {

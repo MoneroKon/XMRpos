@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -33,7 +34,10 @@ func NewAuthService(repo AuthRepository, cfg *config.Config) *AuthService {
 		return s.repo.CreateDevice(device)
 	}
 */
-func (s *AuthService) AuthenticateAdmin(name string, password string) (accessToken string, refreshToken string, err error) {
+func (s *AuthService) AuthenticateAdmin(ctx context.Context, name string, password string) (accessToken string, refreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	if name != s.config.AdminName || password != s.config.AdminPassword {
 		return "", "", errors.New("invalid credentials")
@@ -47,8 +51,11 @@ func (s *AuthService) AuthenticateAdmin(name string, password string) (accessTok
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthService) AuthenticateVendor(name string, password string) (accessToken string, refreshToken string, err error) {
-	vendor, err := s.repo.FindVendorByName(name)
+func (s *AuthService) AuthenticateVendor(ctx context.Context, name string, password string) (accessToken string, refreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	vendor, err := s.repo.FindVendorByName(ctx, name)
 	if err != nil {
 		return "", "", errors.New("invalid credentials")
 	}
@@ -65,8 +72,11 @@ func (s *AuthService) AuthenticateVendor(name string, password string) (accessTo
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthService) AuthenticatePos(vendorID uint, name string, password string) (accessToken string, refreshToken string, err error) {
-	pos, err := s.repo.FindPosByVendorIDAndName(vendorID, name)
+func (s *AuthService) AuthenticatePos(ctx context.Context, vendorID uint, name string, password string) (accessToken string, refreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	pos, err := s.repo.FindPosByVendorIDAndName(ctx, vendorID, name)
 	if err != nil {
 		return "", "", errors.New("invalid credentials")
 	}
@@ -83,10 +93,13 @@ func (s *AuthService) AuthenticatePos(vendorID uint, name string, password strin
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthService) UpdateVendorPassword(vendorID uint, currentPassword string, newPassword string) (accessToken string, newRefreshToken string, err error) {
+func (s *AuthService) UpdateVendorPassword(ctx context.Context, vendorID uint, currentPassword string, newPassword string) (accessToken string, newRefreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// check if the old password is correct
-	vendor, err := s.repo.FindVendorByID(vendorID)
+	vendor, err := s.repo.FindVendorByID(ctx, vendorID)
 	if err != nil {
 		return "", "", errors.New("vendor not found")
 	}
@@ -98,7 +111,7 @@ func (s *AuthService) UpdateVendorPassword(vendorID uint, currentPassword string
 		return "", "", err
 	}
 
-	passwordVersion, err := s.repo.UpdateVendorPasswordHash(vendorID, string(hashedPassword))
+	passwordVersion, err := s.repo.UpdateVendorPasswordHash(ctx, vendorID, string(hashedPassword))
 	if err != nil {
 		return "", "", err
 	}
@@ -111,10 +124,13 @@ func (s *AuthService) UpdateVendorPassword(vendorID uint, currentPassword string
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *AuthService) UpdatePosPassword(posID uint, vendorID uint, currentPassword string, newPassword string) (accessToken string, newRefreshToken string, err error) {
+func (s *AuthService) UpdatePosPassword(ctx context.Context, posID uint, vendorID uint, currentPassword string, newPassword string) (accessToken string, newRefreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// check if the old password is correct
-	pos, err := s.repo.FindPosByID(posID)
+	pos, err := s.repo.FindPosByID(ctx, posID)
 	if err != nil {
 		return "", "", errors.New("pos not found")
 	}
@@ -126,7 +142,7 @@ func (s *AuthService) UpdatePosPassword(posID uint, vendorID uint, currentPasswo
 		return "", "", err
 	}
 
-	passwordVersion, err := s.repo.UpdatePosPasswordHash(posID, string(hashedPassword))
+	passwordVersion, err := s.repo.UpdatePosPasswordHash(ctx, posID, string(hashedPassword))
 	if err != nil {
 		return "", "", err
 	}
@@ -139,14 +155,17 @@ func (s *AuthService) UpdatePosPassword(posID uint, vendorID uint, currentPasswo
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *AuthService) UpdatePosPasswordFromVendor(posID uint, vendorID uint, newPassword string) (accessToken string, newRefreshToken string, err error) {
+func (s *AuthService) UpdatePosPasswordFromVendor(ctx context.Context, posID uint, vendorID uint, newPassword string) (accessToken string, newRefreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return "", "", err
 	}
 
-	passwordVersion, err := s.repo.UpdatePosPasswordHash(posID, string(hashedPassword))
+	passwordVersion, err := s.repo.UpdatePosPasswordHash(ctx, posID, string(hashedPassword))
 	if err != nil {
 		return "", "", err
 	}
@@ -159,7 +178,10 @@ func (s *AuthService) UpdatePosPasswordFromVendor(posID uint, vendorID uint, new
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *AuthService) RefreshToken(refreshToken string, vendorID uint, role string, passwordVersion uint32, posID uint) (accessToken string, newRefreshToken string, err error) {
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string, vendorID uint, role string, passwordVersion uint32, posID uint) (accessToken string, newRefreshToken string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid signing method")
@@ -176,7 +198,7 @@ func (s *AuthService) RefreshToken(refreshToken string, vendorID uint, role stri
 		return s.generateAdminToken()
 	case "vendor":
 		// check that the password version matches
-		vendor, err := s.repo.FindVendorByID(vendorID)
+		vendor, err := s.repo.FindVendorByID(ctx, vendorID)
 		if err != nil {
 			return "", "", errors.New("invalid credentials")
 		}
@@ -186,7 +208,7 @@ func (s *AuthService) RefreshToken(refreshToken string, vendorID uint, role stri
 		return s.generateVendorToken(vendorID, passwordVersion)
 	case "pos":
 		// check that the password version matches
-		pos, err := s.repo.FindPosByID(posID)
+		pos, err := s.repo.FindPosByID(ctx, posID)
 		if err != nil {
 			return "", "", errors.New("invalid credentials")
 		}

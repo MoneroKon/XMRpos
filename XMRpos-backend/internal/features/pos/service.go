@@ -1,6 +1,7 @@
 package pos
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -19,7 +20,10 @@ func NewPosService(repo PosRepository, cfg *config.Config, moneroPay *moneropay.
 	return &PosService{repo: repo, config: cfg, moneroPay: moneroPay}
 }
 
-func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, description *string, amountInCurrency float64, currency string, requiredConfirmations int64) (id uint, address string, err error) {
+func (s *PosService) CreateTransaction(ctx context.Context, vendorID uint, posID uint, amount int64, description *string, amountInCurrency float64, currency string, requiredConfirmations int64) (id uint, address string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	transaction := &models.Transaction{
 		VendorID:              vendorID,
@@ -31,7 +35,7 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 		Description:           description,
 	}
 
-	transactionDB, err := s.repo.CreateTransaction(transaction)
+	transactionDB, err := s.repo.CreateTransaction(ctx, transaction)
 	if err != nil {
 		return 0, "", err
 	}
@@ -49,20 +53,28 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 
 	callbackUrl := s.config.MoneroPayCallbackURL + "receive/" + accessToken
 
+	var desc string
+	if description != nil {
+		desc = *description
+	}
+
 	req := &moneropay.ReceiveRequest{
 		Amount:      amount,
-		Description: *description,
+		Description: desc,
 		CallbackUrl: callbackUrl,
 	}
 
-	resp, err := s.moneroPay.PostReceive(req)
+	// per-call timeout for external dependency
+	callCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	resp, err := s.moneroPay.PostReceive(callCtx, req)
 	if err != nil {
 		return 0, "", err
 	}
 
 	// Update the transaction with the subaddress received from MoneroPay
 	transactionDB.SubAddress = &resp.Address
-	if _, err := s.repo.UpdateTransaction(transactionDB); err != nil {
+	if _, err := s.repo.UpdateTransaction(ctx, transactionDB); err != nil {
 		return 0, "", err
 	}
 
@@ -70,9 +82,12 @@ func (s *PosService) CreateTransaction(vendorID uint, posID uint, amount int64, 
 }
 
 // GetTransaction retrieves a transaction by its ID if authorized
-func (s *PosService) GetTransaction(transactionID uint, vendorID uint, posID uint) (transaction *models.Transaction, httpErr *models.HTTPError) {
+func (s *PosService) GetTransaction(ctx context.Context, transactionID uint, vendorID uint, posID uint) (transaction *models.Transaction, httpErr *models.HTTPError) {
 	// Find the transaction by ID
-	transaction, err := s.repo.FindTransactionByID(transactionID)
+	if ctx == nil {
+		ctx = context.Background()
+  }
+	transaction, err := s.repo.FindTransactionByID(ctx, transactionID)
 	if err != nil {
 		return nil, models.NewHTTPError(404, "Transaction not found")
 	}

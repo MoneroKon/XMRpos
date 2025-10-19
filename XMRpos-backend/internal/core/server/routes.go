@@ -20,10 +20,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
+// Accept a context tied to server lifecycle to stop background loops on shutdown
+func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middleware
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
@@ -47,10 +50,10 @@ func NewRouter(cfg *config.Config, db *gorm.DB) *chi.Mux {
 	adminService := admin.NewAdminService(adminRepository, cfg)
 	authService := auth.NewAuthService(authRepository, cfg)
 	vendorService := vendor.NewVendorService(vendorRepository, db, cfg, rpcClient)
-	vendorService.StartTransferCompleter(context.Background(), 30*time.Second) // Check every 30 seconds
+	vendorService.StartTransferCompleter(ctx, 30*time.Second) // Check every 30 seconds
 	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
 	callbackService := callback.NewCallbackService(callbackRepository, cfg, moneroPayClient)
-	callbackService.StartConfirmationChecker(context.Background(), 30*time.Minute) // Check every 30 minutes
+	callbackService.StartConfirmationChecker(ctx, 30*time.Minute) // Check every 30 minutes
 	miscService := misc.NewMiscService(miscRepository, cfg, moneroPayClient)
 
 	// Initialize handlers

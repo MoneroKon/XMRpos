@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
@@ -33,13 +36,20 @@ type loginResponse struct {
 }
 
 func (h *AuthHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
+
 	var req loginVendorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.AuthenticateAdmin(req.Name, req.Password)
+	accessToken, refreshToken, err := h.service.AuthenticateAdmin(ctx, req.Name, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -51,17 +61,25 @@ func (h *AuthHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 func (h *AuthHandler) LoginVendor(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req loginVendorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.AuthenticateVendor(req.Name, req.Password)
+	accessToken, refreshToken, err := h.service.AuthenticateVendor(ctx, req.Name, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -73,17 +91,25 @@ func (h *AuthHandler) LoginVendor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 func (h *AuthHandler) LoginPos(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req loginPosRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.AuthenticatePos(req.VendorID, req.Name, req.Password)
+	accessToken, refreshToken, err := h.service.AuthenticatePos(ctx, req.VendorID, req.Name, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -95,7 +121,8 @@ func (h *AuthHandler) LoginPos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 type RefreshTokenRequest struct {
@@ -108,9 +135,16 @@ type RefreshTokenResponse struct {
 }
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req RefreshTokenRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -139,7 +173,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	print(role, vendorID, passwordVersion, posID)
 
-	accessToken, refreshToken, err := h.service.RefreshToken(req.RefreshToken, vendorID, role, passwordVersion, posID)
+	accessToken, refreshToken, err := h.service.RefreshToken(ctx, req.RefreshToken, vendorID, role, passwordVersion, posID)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -151,7 +185,8 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 type UpdatePasswordRequest struct {
@@ -161,8 +196,15 @@ type UpdatePasswordRequest struct {
 }
 
 func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req UpdatePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -179,7 +221,7 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Invalid vendor_id claim", http.StatusUnauthorized)
 				return
 			}
-			accessToken, refreshToken, err := h.service.UpdatePosPasswordFromVendor(*vendorIDPtr, *req.PosID, req.NewPassword)
+			accessToken, refreshToken, err := h.service.UpdatePosPasswordFromVendor(ctx, *vendorIDPtr, *req.PosID, req.NewPassword)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
@@ -189,7 +231,7 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 				RefreshToken: refreshToken,
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 			return
 		} else {
 			// Vendor updating own password
@@ -197,7 +239,7 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Invalid vendor_id claim", http.StatusUnauthorized)
 				return
 			}
-			accessToken, refreshToken, err := h.service.UpdateVendorPassword(*vendorIDPtr, req.CurrentPassword, req.NewPassword)
+			accessToken, refreshToken, err := h.service.UpdateVendorPassword(ctx, *vendorIDPtr, req.CurrentPassword, req.NewPassword)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
@@ -207,7 +249,7 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 				RefreshToken: refreshToken,
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
 	case "pos":
@@ -216,7 +258,7 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid pos_id claim", http.StatusUnauthorized)
 			return
 		}
-		accessToken, refreshToken, err := h.service.UpdatePosPassword(*posIDPtr, *vendorIDPtr, req.CurrentPassword, req.NewPassword)
+		accessToken, refreshToken, err := h.service.UpdatePosPassword(ctx, *posIDPtr, *vendorIDPtr, req.CurrentPassword, req.NewPassword)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -226,9 +268,10 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 			RefreshToken: refreshToken,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	io.Copy(io.Discard, r.Body)
 }

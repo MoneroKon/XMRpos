@@ -2,11 +2,14 @@ package moneropay
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -32,15 +35,31 @@ func NewMoneroPayAPIClient() *MoneroPayAPIClient {
 	return &MoneroPayAPIClient{BaseURL: baseURL}
 }
 
+var MpTransport = &http.Transport{
+	MaxIdleConns:          100,
+	MaxIdleConnsPerHost:   10,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ResponseHeaderTimeout: 10 * time.Second,
+}
+
+var mpClient = &http.Client{Transport: MpTransport}
+
 // GetHealth fetches the health status of services from the MoneroPay API
-func (client *MoneroPayAPIClient) GetHealth() (*HealthResponse, error) {
+func (client *MoneroPayAPIClient) GetHealth(ctx context.Context) (*HealthResponse, error) {
 	url := fmt.Sprintf("%s/health", client.BaseURL)
 
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	resp, err := mpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch health status: %s", resp.Status)
@@ -55,14 +74,20 @@ func (client *MoneroPayAPIClient) GetHealth() (*HealthResponse, error) {
 }
 
 // GetBalance fetches the balance from the MoneroPay API
-func (client *MoneroPayAPIClient) GetBalance() (*BalanceResponse, error) {
+func (client *MoneroPayAPIClient) GetBalance(ctx context.Context) (*BalanceResponse, error) {
 	url := fmt.Sprintf("%s/balance", client.BaseURL)
 
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	resp, err := mpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch balance: %s", resp.Status)
@@ -77,7 +102,7 @@ func (client *MoneroPayAPIClient) GetBalance() (*BalanceResponse, error) {
 }
 
 // PostReceive creates a new receive address in the MoneroPay API, takes ReceiveRequest as input
-func (client *MoneroPayAPIClient) PostReceive(req *ReceiveRequest) (*ReceiveResponse, error) {
+func (client *MoneroPayAPIClient) PostReceive(ctx context.Context, req *ReceiveRequest) (*ReceiveResponse, error) {
 	url := fmt.Sprintf("%s/receive", client.BaseURL)
 
 	jsonReq, err := json.Marshal(req)
@@ -85,11 +110,18 @@ func (client *MoneroPayAPIClient) PostReceive(req *ReceiveRequest) (*ReceiveResp
 		return nil, err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonReq))
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonReq))
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := mpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to create receive address: %s", resp.Status)
@@ -109,7 +141,7 @@ type GetReceiveAddressParams struct {
 	MaxHeight *int64
 }
 
-func (client *MoneroPayAPIClient) GetReceiveAddress(address string, params *GetReceiveAddressParams) (*ReceiveAddressResponse, error) {
+func (client *MoneroPayAPIClient) GetReceiveAddress(ctx context.Context, address string, params *GetReceiveAddressParams) (*ReceiveAddressResponse, error) {
 	url := fmt.Sprintf("%s/receive/%s", client.BaseURL, address)
 
 	// Add optional query parameters for minHeight and maxHeight if they are provided
@@ -124,11 +156,17 @@ func (client *MoneroPayAPIClient) GetReceiveAddress(address string, params *GetR
 		}
 	}
 
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	resp, err := mpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch receive address: %s", resp.Status)
@@ -143,7 +181,7 @@ func (client *MoneroPayAPIClient) GetReceiveAddress(address string, params *GetR
 }
 
 // PostTransfer creates a new transfer in the MoneroPay API, takes TransferRequest as input
-func (client *MoneroPayAPIClient) PostTransfer(req *TransferRequest) (*TransferResponse, error) {
+func (client *MoneroPayAPIClient) PostTransfer(ctx context.Context, req *TransferRequest) (*TransferResponse, error) {
 	url := fmt.Sprintf("%s/transfer", client.BaseURL)
 
 	jsonReq, err := json.Marshal(req)
@@ -151,11 +189,18 @@ func (client *MoneroPayAPIClient) PostTransfer(req *TransferRequest) (*TransferR
 		return nil, err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonReq))
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonReq))
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := mpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to create transfer: %s", resp.Status)
@@ -170,14 +215,20 @@ func (client *MoneroPayAPIClient) PostTransfer(req *TransferRequest) (*TransferR
 }
 
 // GetTransfer fetches a transfer by tx_hash from the MoneroPay API
-func (client *MoneroPayAPIClient) GetTransfer(txHash string) (*TransferInformationResponse, error) {
+func (client *MoneroPayAPIClient) GetTransfer(ctx context.Context, txHash string) (*TransferInformationResponse, error) {
 	url := fmt.Sprintf("%s/transfer/%s", client.BaseURL, txHash)
 
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	resp, err := mpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch transfer: %s", resp.Status)

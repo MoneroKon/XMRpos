@@ -1,8 +1,11 @@
 package vendor
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"time"
 
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/utils"
@@ -23,13 +26,20 @@ type createVendorRequest struct {
 }
 
 func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req createVendorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	httpErr := h.service.CreateVendor(req.Name, req.Password, req.InviteCode)
+	httpErr := h.service.CreateVendor(ctx, req.Name, req.Password, req.InviteCode)
 
 	if httpErr != nil {
 		http.Error(w, httpErr.Message, httpErr.Code)
@@ -39,10 +49,15 @@ func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 	resp := "Vendor created successfully"
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 func (h *VendorHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+
 	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
 	if !ok || role != "vendor" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -55,7 +70,7 @@ func (h *VendorHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpErr := h.service.DeleteVendor(*(vendorID.(*uint)))
+	httpErr := h.service.DeleteVendor(ctx, *(vendorID.(*uint)))
 	if httpErr != nil {
 		http.Error(w, httpErr.Message, httpErr.Code)
 		return
@@ -63,7 +78,8 @@ func (h *VendorHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
 
 	resp := "Vendor deleted successfully"
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 type createPosRequest struct {
@@ -72,8 +88,15 @@ type createPosRequest struct {
 }
 
 func (h *VendorHandler) CreatePos(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req createPosRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -90,7 +113,7 @@ func (h *VendorHandler) CreatePos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpErr := h.service.CreatePos(req.Name, req.Password, *(vendorID.(*uint)))
+	httpErr := h.service.CreatePos(ctx, req.Name, req.Password, *(vendorID.(*uint)))
 
 	if httpErr != nil {
 		http.Error(w, httpErr.Message, httpErr.Code)
@@ -100,7 +123,8 @@ func (h *VendorHandler) CreatePos(w http.ResponseWriter, r *http.Request) {
 	resp := "POS created successfully"
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 type getBalanceResponse struct {
@@ -108,6 +132,10 @@ type getBalanceResponse struct {
 }
 
 func (h *VendorHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+
 	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
 	if !ok || role != "vendor" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -120,7 +148,7 @@ func (h *VendorHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	balance, httpErr := h.service.GetBalance(*(vendorID.(*uint)))
+	balance, httpErr := h.service.GetBalance(ctx, *(vendorID.(*uint)))
 	if httpErr != nil {
 		http.Error(w, httpErr.Message, httpErr.Code)
 		return
@@ -131,7 +159,7 @@ func (h *VendorHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 type transferBalanceRequest struct {
@@ -139,8 +167,15 @@ type transferBalanceRequest struct {
 }
 
 func (h *VendorHandler) TransferBalance(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req transferBalanceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -157,7 +192,7 @@ func (h *VendorHandler) TransferBalance(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpErr := h.service.CreateTransfer(*(vendorID.(*uint)), req.Address)
+	httpErr := h.service.CreateTransfer(ctx, *(vendorID.(*uint)), req.Address)
 	if httpErr != nil {
 		http.Error(w, httpErr.Message, httpErr.Code)
 		return
@@ -165,5 +200,6 @@ func (h *VendorHandler) TransferBalance(w http.ResponseWriter, r *http.Request) 
 
 	resp := "Transfer initiated successfully"
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }

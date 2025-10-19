@@ -1,8 +1,10 @@
 package misc
 
 import (
-	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
+	"context"
+
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/thirdparty/moneropay"
+	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
 )
 
 type MiscService struct {
@@ -16,30 +18,27 @@ func NewMiscService(repo MiscRepository, cfg *config.Config, moneroPay *moneropa
 }
 
 // Check if the vendor and POS are authorized for the transaction
-func (s *MiscService) GetHealth() (healthResponse HealthResponse) {
-	healthResponse = HealthResponse{}
+func (s *MiscService) GetHealth(ctx context.Context) HealthResponse {
+	h := HealthResponse{}
 
-	// get the status of the MoneroPay service
-	moneroPayStatus, moneroPayErr := s.moneroPay.GetHealth()
-
-	if moneroPayErr != nil {
-		healthResponse.Services.MoneroPay.Status = 503
-	}
-	healthResponse.Services.MoneroPay = *moneroPayStatus
-
-	// get the status of the PostgreSQL service
-	postgresqlStatus, err := s.repo.GetPostgresqlHealth()
-	if err != nil {
-		healthResponse.Services.Postgresql = false
+	// Check MoneroPay service health
+	mp, mpErr := s.moneroPay.GetHealth(ctx)
+	if mpErr != nil {
+		h.Services.MoneroPay.Status = 503
 	} else {
-		healthResponse.Services.Postgresql = postgresqlStatus
+		h.Services.MoneroPay = *mp
 	}
 
-	if (moneroPayErr != nil) || (err != nil) || (healthResponse.Services.MoneroPay.Status != 200) || (!healthResponse.Services.Postgresql) {
-		healthResponse.Status = 503
+	// Check PostgreSQL service health
+	postgresqlStatus, pgErr := s.repo.GetPostgresqlHealth(ctx)
+	h.Services.Postgresql = postgresqlStatus && pgErr == nil
+
+	// Set overall status
+	if h.Services.Postgresql && h.Services.MoneroPay.Status == 200 {
+		h.Status = 200
 	} else {
-		healthResponse.Status = 200
+		h.Status = 503
 	}
 
-	return healthResponse
+	return h
 }

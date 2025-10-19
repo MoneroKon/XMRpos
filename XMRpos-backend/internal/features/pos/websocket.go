@@ -1,9 +1,11 @@
 package pos
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
@@ -40,6 +42,9 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	TransactionID := uint(transactionID64)
+	// bound auth + repo checks
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
 
 	// check if the POS is authorized to view this transaction
 	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
@@ -50,7 +55,7 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
 	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
 
-	transaction, err := h.service.repo.FindTransactionByID(TransactionID)
+	transaction, err := h.service.repo.FindTransactionByID(ctx, TransactionID)
 	if err != nil {
 		http.Error(w, "Transaction not found", http.StatusNotFound)
 		return
@@ -65,17 +70,39 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	// websocket I/O limits to prevent hangs
+	const (
+		pongWait   = 60 * time.Second
+		pingPeriod = 30 * time.Second
+	)
+	_ = conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(pongWait)) })
+	conn.SetReadLimit(1 << 20) // 1MB
+
 	client := &wsClient{conn: conn, transactionID: TransactionID}
 
 	hub.mu.Lock()
 	hub.clients[TransactionID] = append(hub.clients[TransactionID], client)
 	hub.mu.Unlock()
 
-	// Keep connection open
+	// ping to detect dead peers
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
+
 	for {
-		_, _, err := conn.ReadMessage()
-		if err != nil {
-			break
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second)); err != nil {
+				return
+			}
+		default:
+			_ = conn.SetReadDeadline(time.Now().Add(pongWait))
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
 		}
 	}
 
@@ -99,6 +126,10 @@ func NotifyTransactionUpdate(transactionID uint, update interface{}) {
 	hub.mu.Unlock()
 
 	for _, client := range clients {
-		client.conn.WriteJSON(update)
+		// prevent a slow client from blocking others
+		_ = client.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		if err := client.conn.WriteJSON(update); err != nil {
+			_ = client.conn.Close()
+		}
 	}
 }

@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"context"
+	"reflect"
 	"errors"
 	"net/http"
-	"reflect"
+	"time"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,6 +24,10 @@ func AuthMiddleware(cfg *config.Config, repo auth.AuthRepository) func(next http
 				http.Error(w, "Authorization header missing", http.StatusUnauthorized)
 				return
 			}
+
+			authCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			r = r.WithContext(authCtx)
 
 			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 			if tokenString == authHeader {
@@ -55,7 +60,7 @@ func AuthMiddleware(cfg *config.Config, repo auth.AuthRepository) func(next http
 					http.Error(w, "Missing vendor_id", http.StatusUnauthorized)
 					return
 				}
-				vendor, err := repo.FindVendorByID(*claims.VendorID)
+				vendor, err := repo.FindVendorByID(authCtx, *claims.VendorID)
 				if err != nil {
 					http.Error(w, "Vendor not found", http.StatusUnauthorized)
 					return
@@ -69,7 +74,7 @@ func AuthMiddleware(cfg *config.Config, repo auth.AuthRepository) func(next http
 					http.Error(w, "Missing pos_id", http.StatusUnauthorized)
 					return
 				}
-				pos, err := repo.FindPosByID(*claims.PosID)
+				pos, err := repo.FindPosByID(authCtx, *claims.PosID)
 				if err != nil {
 					http.Error(w, "POS not found", http.StatusUnauthorized)
 					return
@@ -80,8 +85,8 @@ func AuthMiddleware(cfg *config.Config, repo auth.AuthRepository) func(next http
 				}
 			}
 
-			ctx := AddClaimsToContext(r.Context(), claims)
-			next.ServeHTTP(w, r.WithContext(ctx))
+			claimsCtx := AddClaimsToContext(r.Context(), claims)
+			next.ServeHTTP(w, r.WithContext(claimsCtx))
 		})
 	}
 }

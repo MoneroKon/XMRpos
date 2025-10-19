@@ -1,9 +1,12 @@
 package pos
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
@@ -32,8 +35,15 @@ type createTransactionResponse struct {
 }
 
 func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB cap
+
 	var req createTransactionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -52,7 +62,7 @@ func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
 	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
 
-	id, address, err := h.service.CreateTransaction(*vendorIDPtr, *posIDPtr, req.Amount, req.Description, req.AmountInCurrency, req.Currency, req.RequiredConfirmations)
+	id, address, err := h.service.CreateTransaction(ctx, *vendorIDPtr, *posIDPtr, req.Amount, req.Description, req.AmountInCurrency, req.Currency, req.RequiredConfirmations)
 	if err != nil {
 		http.Error(w, "Failed to create transaction", http.StatusInternalServerError)
 		return
@@ -64,10 +74,15 @@ func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
 
 func (h *PosHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+
 	vars := chi.URLParam(r, "id")
 	transactionID, err := strconv.ParseUint(vars, 10, 64)
 	if err != nil {
@@ -88,7 +103,7 @@ func (h *PosHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transaction, httpErr := h.service.GetTransaction(transactionIDUint, *vendorIDPtr, *posIDPtr)
+	transaction, httpErr := h.service.GetTransaction(ctx, transactionIDUint, *vendorIDPtr, *posIDPtr)
 	if httpErr != nil {
 		http.Error(w, httpErr.Message, httpErr.Code)
 		return

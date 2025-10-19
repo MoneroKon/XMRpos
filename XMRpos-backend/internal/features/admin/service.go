@@ -2,6 +2,7 @@ package admin
 
 import (
 	"time"
+	"context"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/config"
@@ -17,7 +18,11 @@ func NewAdminService(repo AdminRepository, cfg *config.Config) *AdminService {
 	return &AdminService{repo: repo, config: cfg}
 }
 
-func (s *AdminService) CreateInvite(validUntil time.Time, forcedName *string) (inviteCode string, err error) {
+func (s *AdminService) CreateInvite(ctx context.Context, validUntil time.Time, forcedName *string) (inviteCode string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	inviteCode, err = gonanoid.New()
 
 	if err != nil {
@@ -31,7 +36,7 @@ func (s *AdminService) CreateInvite(validUntil time.Time, forcedName *string) (i
 		ValidUntil: validUntil,
 	}
 
-	_, err = s.repo.CreateInvite(invite)
+	_, err = s.repo.CreateInvite(ctx, invite)
 	if err != nil {
 		return "", err
 	}

@@ -1,8 +1,11 @@
 package misc
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"time"
 
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/thirdparty/moneropay"
 )
@@ -26,9 +29,13 @@ type HealthResponse struct {
 }
 
 func (h *MiscHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
 
-	resp := h.service.GetHealth()
+	resp := h.service.GetHealth(ctx)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
 }
