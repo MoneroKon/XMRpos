@@ -2,6 +2,7 @@ package pos
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -22,7 +23,42 @@ type wsHub struct {
 	mu      sync.Mutex
 }
 
-var upgrader = websocket.Upgrader{}
+func uintFromClaim(claim interface{}) (uint, bool) {
+	switch v := claim.(type) {
+	case uint:
+		return v, true
+	case *uint:
+		if v == nil {
+			return 0, false
+		}
+		return *v, true
+	case uint64:
+		return uint(v), true
+	case int:
+		if v < 0 {
+			return 0, false
+		}
+		return uint(v), true
+	case int64:
+		if v < 0 {
+			return 0, false
+		}
+		return uint(v), true
+	case float64:
+		if v < 0 {
+			return 0, false
+		}
+		return uint(v), true
+	default:
+		return 0, false
+	}
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 var hub = wsHub{
 	clients: make(map[uint][]*wsClient),
@@ -47,13 +83,32 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// check if the POS is authorized to view this transaction
-	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	roleClaim, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	role, _ := roleClaim.(string)
 	if !ok || role != "pos" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
-	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
+	vendorClaim, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsVendorIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	vendorID, ok := uintFromClaim(vendorClaim)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	posClaim, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsPosIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	posID, ok := uintFromClaim(posClaim)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	transaction, err := h.service.repo.FindTransactionByID(ctx, TransactionID)
 	if err != nil {
@@ -61,13 +116,15 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.service.IsAuthorizedForTransaction(*vendorIDPtr, *posIDPtr, transaction) {
+	if !h.service.IsAuthorizedForTransaction(vendorID, posID, transaction) {
 		http.Error(w, "Unauthorized for this transaction", http.StatusUnauthorized)
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		log.Printf("transaction websocket upgrade failed (transactionID=%d, posID=%d, vendorID=%d): %v", TransactionID, posID, vendorID, err)
+		http.Error(w, "Failed to upgrade websocket connection: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// websocket I/O limits to prevent hangs
@@ -84,6 +141,22 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 	hub.mu.Lock()
 	hub.clients[TransactionID] = append(hub.clients[TransactionID], client)
 	hub.mu.Unlock()
+
+	defer func() {
+		hub.mu.Lock()
+		clients := hub.clients[TransactionID]
+		for i, c := range clients {
+			if c == client {
+				hub.clients[TransactionID] = append(clients[:i], clients[i+1:]...)
+				break
+			}
+		}
+		if len(hub.clients[TransactionID]) == 0 {
+			delete(hub.clients, TransactionID)
+		}
+		hub.mu.Unlock()
+		_ = conn.Close()
+	}()
 
 	// ping to detect dead peers
 	ticker := time.NewTicker(pingPeriod)
@@ -106,17 +179,6 @@ func (h *PosHandler) TransactionWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Remove client on disconnect
-	hub.mu.Lock()
-	clients := hub.clients[TransactionID]
-	for i, c := range clients {
-		if c == client {
-			hub.clients[TransactionID] = append(clients[:i], clients[i+1:]...)
-			break
-		}
-	}
-	hub.mu.Unlock()
-	conn.Close()
 }
 
 // Call this when a transaction is updated

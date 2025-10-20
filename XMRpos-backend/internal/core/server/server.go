@@ -36,10 +36,9 @@ func (s *Server) Start() error {
 
 	s.router = NewRouter(ctx, s.config, s.db)
 
-	handler := http.TimeoutHandler(s.router, 15*time.Second, "")
 	server := &http.Server{
 		Addr:              "0.0.0.0:" + s.config.Port,
-		Handler:           handler,
+		Handler:           s.router,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      30 * time.Second,
