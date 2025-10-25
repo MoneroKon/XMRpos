@@ -1,0 +1,41 @@
+diff --git a/.env.example b/.env.example
+index f5a1297..6f2c52b 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,7 +1,7 @@
+-MONERO_DAEMON_RPC_HOSTNAME=xmr-node.example.net
+-MONERO_DAEMON_RPC_PORT=18081
++MONERO_DAEMON_RPC_HOSTNAME=node.monerodevs.org
++MONERO_DAEMON_RPC_PORT=18089
+ MONERO_DAEMON_RPC_USERNAME=
+ MONERO_DAEMON_RPC_PASSWORD=
+ POSTGRES_USERNAME=moneropay
+-POSTGRES_PASSWORD=sup3rs3cure
+-POSTGRES_DATABASE=moneropay
++POSTGRES_PASSWORD=CHANGEME
++POSTGRES_DATABASE=moneropay
+\ No newline at end of file
+diff --git a/docker-compose.override.yaml.example b/docker-compose.override.yaml.example
+index 9993453..7ae477b 100644
+--- a/docker-compose.override.yaml.example
++++ b/docker-compose.override.yaml.example
+@@ -2,3 +2,6 @@ services:
+   moneropay:
+     ports:
+       - 127.0.0.1:5000:5000
++  monero-wallet-rpc:
++    ports:
++      - 18083:28081
+diff --git a/docker-compose.yaml b/docker-compose.yaml
+index 0dc78ce..8eb730f 100644
+--- a/docker-compose.yaml
++++ b/docker-compose.yaml
+@@ -44,6 +44,8 @@ services:
+       - POSTGRESQL=postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DATABASE}?sslmode=disable
+       - ZERO_CONF=true # set false to disable 0-conf
+       # - SQLITE=file:/app/sqlite/db.sqlite
++      - LOG_FORMAT=pretty
++      - POLL_FREQUENCY=2
+     depends_on:
+       monero-wallet-rpc:
+         condition: service_healthy
