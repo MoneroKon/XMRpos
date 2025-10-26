@@ -1,120 +1,168 @@
-# XMRpos
-FOSS Monero Point of Sale (POS) Android App
+# XMRpos Client
+**Free and Open Source Monero Point of Sale (POS) Android App**
 
-![pay](xmrpos-pay.gif)
+<img width="500" src="https://github.com/user-attachments/assets/ac8414eb-4d28-4609-a4fe-4144e17d46f7" alt="XMRpos screenshot" />
+<br>
+<a href="https://xmrpos.twed.org/fdroid" target="_blank" rel="noopener noreferrer">
+  <img width="200" height="77" alt="fdroid" src="https://github.com/user-attachments/assets/125217c5-1bfb-4ba3-85e4-dc69ab78637b" />
+</a>
 
-# Compatability
-The app is designed to run specifically on the **Alacrity MJ-Q50Plus** device but should work on any **Noryox NB55** based devices.
+---
 
-# Usage
-> [!WARNING]  
-> You should only communicate with the MoneroPay instance through a private and secure network
+**XMRpos** is a FOSS Android point-of-sale (POS) system for accepting Monero (XMR) payments. It provides a **self-hosted**, **trustless**, and **secure** payment solution for vendors and merchants.
 
-## Initial required configuration
-When running XMRpos for the first time you need to at least configure the MoneroPay endpoint. This can be done by:
-1. Tap on settings icon on the top right corner
-2. Tap on MoneroPay
-3. Change the MoneroPay address to the one you want to use.
+---
 
-If your device has a printer you have to configure it like this:
-1. Tap on settings icon on the top right corner
-2. Tap on printer settings
-3. Select the printer connection that your printer uses (NOTE: only Bluetooth is tested right now)
-4. Adjust the printer parameters if necessary 
+## Features
+- **Open Source:** Licensed under GNU GPL v3.0.  
+- **Trustless Architecture:** Operate your own backend; no reliance on third parties.  
+- **Device-Agnostic:** Works on any Android device — no proprietary hardware.  
+- **Receipt Printing:** Supports Bluetooth ESC/POS printers.  
+- **Scalable:** Unlimited POS clients and vendors, centrally managed.  
+- **Secure:** No wallet keys stored or exposed on client devices.  
+- **Integrated Backend:** Backend API interfaces with `monerod` and **MoneroPay**.  
+- **Fast Payments:** Supports 0-confirmation Monero transactions in 5–10 seconds.
 
-## Taking payments
-The payment flow is a 3 step process. 
-1. Enter the amount in the `primaryFiatCurrency` and press the green button
-2. Tell customers to scan the QR code or tap their phone against the card reader (which in this case emulates a NFC tag). The address, amount, and private note will get prefilled for most Monero wallet apps. The customer then sends the funds. Here you can also reference the `referenceFiatCurrencies`.
-3. When the payment is done with either 0, 1, or 10 confirmations (configurable in settings) the app will automatically transfer you to this third screen where you have the choice to print out a receipt.
+---
 
-## Settings
+## Compatibility
+- **Client:** Any Android device, with or without a Bluetooth mobile printer.  
+- **Backend:** Ubuntu LTS VPS or LAN environment (low-spec compatible).  
 
-### Company information
-Here you can upload a logo which will be shown on the top of the receipt.
+---
 
-You can also change the company name which will appear just below the logo.
+## Backend Setup
 
-The contact information is also changeable from here and will appear just below the company name
+### Prerequisites
+- Clean **Ubuntu LTS VPS**
+- Sudo privileges
 
-At the bottom of the receipt is the receipt footer text which can also be changed here.
+### Installation
+```bash
+wget https://raw.githubusercontent.com/MoneroKon/XMRpos/refs/heads/main/install.sh -O install.sh
+chmod +x install.sh
+sudo ./install.sh
+````
 
-### Fiat currencies
-Here you can change the `primaryFiatCurrency` and the `referenceFiatCurrencies`
+This installs **MoneroPay** and **XMRpos-backend** using Docker.
+It automatically configures environment variables, secrets, health checks, and wallet setup.
+
+### Uninstall / Cleanup
+
+```bash
+sudo ./install.sh clean
+```
+
+Removes all containers, cloned repositories, and `~/wallets`.
+**Always back up your wallets** before cleaning.
+
+> For detailed backend API usage, see [`XMRpos-backend/README.md`](XMRpos/XMRpos-backend/README.md).
+
+---
+
+## Taking Payments
+
+1. Enter the amount in your `primaryFiatCurrency` and tap the **green button**.
+2. The app generates a Monero payment QR or NFC tag with address, amount, and note prefilled.
+   The customer scans it and sends funds using any Monero wallet.
+3. Once the payment reaches the configured confirmation threshold (0, 1, or 10),
+   the app automatically advances to the receipt screen where you can:
+
+   * Print a receipt
+   * Start a new order
+
+---
+
+## Settings Overview
+
+### Company Information
+
+* Upload a logo (appears on receipts)
+* Edit company name and contact details
+* Customize footer text
+
+### Fiat Currencies
+
+* Configure the `primaryFiatCurrency`
+* Add multiple `referenceFiatCurrencies`
 
 ### Security
-Here you can enable and disable PIN codes on app start or to open settings. After enableing them, please use a PIN code you can remember because right now there is no way to reset them if you forget them.
 
-### Export transactions
-All transactions which are successful are recorded to an internal database.
+* Enable PIN protection for app startup or settings access
+* **Note:** PINs cannot currently be reset — choose carefully
 
-You can choose to export all of them as a CSV file (txId, xmrAmount, fiatValue, timestamp).
+### Printer Settings
 
-You can also choose to delete all transactions that are currently saved.
+* Select connection type (Bluetooth tested and supported)
+* Adjust printer parameters if needed
+* Use **Test Print** to verify output
 
-### MoneroPay
-Here you enter the server address for your MoneroPay instance.
+---
 
-You can also choose to change the request interval which is how often the app will manually check the MoneroPay instance to look for changes instead of waiting for a callback
+## Building XMRpos Client from Source
 
-The number of required confirmations can also be changed here (0-conf, 1-conf or 10-conf)
+### Prerequisites
 
-### Printer settings
-Here you can choose the printer connection type of your printer (NOTE: Only Bluetooth is tested)
+* [Android Studio](https://developer.android.com/studio)
 
-There are many parameters here that are changeable if your printer does not work out of the box.
-
-The print test button prints a receipt the same way as it would be printed after a transaction, but with static values.
-
-
-# Building XMRpos from source
-This guide will help you build and run **XMRpos** from source.
-
-## Prerequisites
-- **Android Studio**: Download and install Android Studio from [here](https://developer.android.com/studio).
-
-## Steps to build the app
-
-### 1. Clone the repository
-Start by cloning the repository to your local machine. Open a terminal and run the following command:
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/MoneroKon/XMRpos
 ```
 
-### 2. Open the project in Android Studio
-1. Open Android Studio.
-2. Select **Open an Existing Project**.
-3. Navigate to the cloned XMRpos directory and then to the XMRpos subfolder and open the project.
+### 2. Open in Android Studio
 
-### 3. Install dependencies
-Android Studio should automatically download the necessary dependencies when you open the project. If this doesn’t happen, manually sync the project with Gradle by following these steps:
-1. Go to **File > Sync Project with Gradle Files**. 
-2. Wait for the sync to complete
+1. Launch Android Studio
+2. Select **Open an Existing Project**
+3. Navigate to `XMRpos/XMRpos` and open it
 
-### 4. Configure the build variant
-If you are building for a specific variant (e.g., debug or release), you can configure the build variant:
-1. In Android Studio, open the **Build Variants** tab.
-2. Select the desired build variant (e.g., `debug` or `release`).
+### 3. Install Dependencies
+
+Android Studio auto-installs dependencies.
+If not, manually sync Gradle:
+
+```
+File > Sync Project with Gradle Files
+```
+
+### 4. Choose Build Variant
+
+```
+View > Tool Windows > Build Variants
+```
+
+Select `debug` or `release`.
 
 ### 5. Build the APK
-1. Go to **Build > Build APK(s)**.
-2. Wait for Android Studio to complete the build process.
 
-Alternatively, you can build the APK using the terminal:
-```bash
-./gradlew assembleDebug  # For Debug build
-./gradlew assembleRelease  # For Release build
+#### GUI method:
+
 ```
-The APK will be available in the app/build/outputs/apk/ directory.
+Build > Build APK(s)
+```
 
-# Building XMRpos with Docker
+#### Command line:
 
-## Prerequisites
-- Docker Engine ≥ 24
-- Docker Compose plugin
-- 8 GB RAM and ~10 GB free disk space
-- Add User to `docker` group
+```bash
+./gradlew assembleDebug    # Debug build
+./gradlew assembleRelease  # Release build
+```
+
+Output: `app/build/outputs/apk/`
+
+---
+
+## Building with Docker
+
+### Requirements
+
+* Docker Engine ≥ 24
+* Docker Compose plugin
+* 8 GB RAM, ~10 GB free disk space
+* User added to `docker` group
+
+### Build
 
 ```bash
 git clone https://github.com/MoneroKon/XMRpos
@@ -123,7 +171,7 @@ docker compose build --no-cache
 docker compose up --abort-on-container-exit
 ```
 
-### From prebuilt image
+### Using Prebuilt Image
 
 ```bash
 git clone https://github.com/MoneroKon/XMRpos
@@ -135,38 +183,21 @@ docker run --rm \
   ghcr.io/ajs-xmr/xmrpos-android-builder:df7af4d
 ```
 
-The APK will be created at `app/build/outputs/apk/debug/app-debug.apk`.
+Output APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-# XMRpos Backend Server Installation
+---
 
-On a clean Ubuntu LTS VPS:
+## Donations
 
-- Run:  
-  ```bash
-  wget https://raw.githubusercontent.com/MoneroKon/XMRpos/refs/heads/main/install.sh -O install.sh && chmod +x install.sh
-  ```
-
-- Execute:
-
-  ```bash
-  sudo ./install.sh
-  ```
-  This installs **MoneroPay** and **XMRpos-backend**. The script configures Docker, environment files, secrets, health checks, and wallet setup.
-
-- To remove everything:
-
-  ```bash
-  sudo ./install.sh clean
-  ```
-
-  This clears all containers, cloned repositories, and the `~/wallets` directory. Always back up your wallets.
-
-Refer to `XMRpos/XMRpos-backend/README.md` for API usage details.
-
-# Donate XMR
-
-**Address**:
+Support the project with Monero (XMR):
 
 ```
 88zkpYQRJPmeuycSN7Jx3UHq9vH1u2dD8eE1rECvCAouPj75Cdnu1eUacQ5p7ZMvdr4e6BRe2FShv4HoatSs9HcwEeZCupZ
-``` 
+```
+
+---
+
+## License
+
+Licensed under the **GNU General Public License v3.0**.
+See [LICENSE](LICENSE) for details.
