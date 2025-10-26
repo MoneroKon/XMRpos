@@ -18,7 +18,7 @@ XMRpos-backend is a backend service for managing XMRpos operations. It provides 
 
 - Go 1.23+
 - PostgreSQL database
-- MoneroPay API instance
+- MoneroPay API instance (git apply `moneropay.patch`)
 - Monero Wallet RPC
 
 ### Configuration
