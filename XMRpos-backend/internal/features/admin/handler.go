@@ -40,6 +40,15 @@ type transferBalanceRequest struct {
 	VendorID uint   `json:"vendor_id"`
 }
 
+type deleteVendorRequest struct {
+	VendorID uint `json:"vendor_id"`
+}
+
+type deleteVendorResponse struct {
+	Success bool `json:"success"`
+	ID      uint `json:"id"`
+}
+
 func (h *AdminHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	// check jwt if admin
 
@@ -182,3 +191,59 @@ func (h *AdminHandler) TransferBalance(w http.ResponseWriter, r *http.Request) {
 	io.Copy(io.Discard, r.Body)
 }
 
+func (h *AdminHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "admin" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var req deleteVendorRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.VendorID == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success": false,
+			"message": "vendor_id is required",
+		})
+		io.Copy(io.Discard, r.Body)
+		return
+	}
+
+	httpErr := h.service.DeleteVendor(ctx, req.VendorID)
+	if httpErr != nil {
+		message := httpErr.Message
+		if httpErr.Code == http.StatusNotFound {
+			message = "No vendor with ID"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(httpErr.Code)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success": false,
+			"message": message,
+		})
+		io.Copy(io.Discard, r.Body)
+		return
+	}
+
+	resp := deleteVendorResponse{
+		Success: true,
+		ID:      req.VendorID,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+	io.Copy(io.Discard, r.Body)
+}

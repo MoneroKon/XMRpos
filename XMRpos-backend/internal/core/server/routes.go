@@ -54,10 +54,10 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *
 	miscRepository := misc.NewMiscRepository(db)
 
 	// Initialize services
-	adminService := admin.NewAdminService(adminRepository, cfg)
-	authService := auth.NewAuthService(authRepository, cfg)
 	vendorService := vendor.NewVendorService(vendorRepository, db, cfg, rpcClient, moneroPayClient)
 	vendorService.StartTransferCompleter(ctx, 30*time.Second) // Check every 30 seconds
+	adminService := admin.NewAdminService(adminRepository, cfg, vendorService)
+	authService := auth.NewAuthService(authRepository, cfg)
 	posService := pos.NewPosService(posRepository, cfg, moneroPayClient)
 	callbackService := callback.NewCallbackService(callbackRepository, cfg, moneroPayClient)
 	callbackService.StartConfirmationChecker(ctx, 2*time.Second) // Check for confirmations every 2 seconds
@@ -102,6 +102,7 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *
 		r.Get("/admin/vendors", adminHandler.ListVendors)
 		r.Get("/admin/balance", adminHandler.GetWalletBalance)
 		r.Post("/admin/transfer-balance", adminHandler.TransferBalance)
+		r.Post("/admin/delete", adminHandler.DeleteVendor)
 
 		// Vendor routes
 		r.Post("/vendor/delete", vendorHandler.DeleteVendor)
