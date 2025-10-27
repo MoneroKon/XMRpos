@@ -1,21 +1,52 @@
 server {
-  listen 80;
-  server_name localhost;
+    listen 80;
+    listen [::]:80;
+    server_name xmrpos.twed.org;
+    return 301 https://$host$request_uri;
+}
 
-  root /var/www/html;
-  index index.html;
+# HTTPS site
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name xmrpos.twed.org;
 
-  location / {
-    try_files $uri $uri/ /index.html;
-  }
+    root /var/www/html;
+    index index.html;
 
-  location ~ ^/(misc|vendor|auth|pos)(/|$) {
-    proxy_pass http://xmr1.twed.org:8080;
-    proxy_set_header Host xmr1.twed.org;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_connect_timeout 5s;
-    proxy_send_timeout 30s;
-    proxy_read_timeout 30s;
-  }
+    # Redirect /fdroid/repo to /fdroid/repo/
+    location = /fdroid/repo {
+        return 301 /fdroid/repo/;
+    }
+
+    # F-Droid repo UI and index files
+    location ^~ /fdroid/repo/ {
+        alias /var/www/xmrpos_fdroid/;
+        index index.html;
+        try_files $uri $uri/ =404;
+        autoindex on;
+        add_header Cache-Control "no-store";
+    }
+
+    # Static files or SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # App proxies
+    location ~ ^/(misc|vendor|auth|pos|admin)(/|$) {
+        proxy_pass http://xmr1.twed.org:8080;
+        proxy_set_header Host xmr1.twed.org;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # SSL
+    ssl_certificate /etc/letsencrypt/live/xmrpos.twed.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/xmrpos.twed.org/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 }

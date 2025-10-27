@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>XMRpos Admin API Test Console</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:1100px;background:#282A36;color:#F8F8F2}
+    h1,h2{margin:0 0 8px;color:#F8F8F2}
+    .wrap{display:grid;gap:16px}
+    .card{background:#303347;border:1px solid #44475A;border-radius:10px;padding:18px;box-shadow:0 6px 14px rgba(0,0,0,0.25)}
+    .card > * + *{margin-top:16px}
+    label{display:block;margin:0 0 6px;color:#F8F8F2;font-weight:500}
+    input,textarea,button,select{width:100%;padding:10px 12px;font-size:14px;border:1px solid #6272A4;border-radius:6px;background:#44475A;color:#F8F8F2}
+    input:focus,textarea:focus,select:focus{outline:2px solid #8BE9FD;outline-offset:1px}
+    button{background:#6272A4;border:1px solid #6272A4;font-weight:600;cursor:pointer;transition:background 0.2s,border-color 0.2s}
+    button:hover{background:#6f7bc7;border-color:#6f7bc7}
+    textarea{min-height:96px;font-family:ui-monospace,Consolas,monospace}
+    pre{overflow:auto;white-space:pre-wrap;word-wrap:anywhere;background:#21222C;border:1px solid #44475A;padding:12px;border-radius:8px;color:#F8F8F2}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .grid2 > div{display:flex;flex-direction:column;gap:6px}
+    .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+    .muted{color:#6272A4}
+    .err{color:#FF5555}
+    code{background:#44475A;color:#F8F8F2;border-radius:4px;padding:0 4px}
+  </style>
+</head>
+<body>
+<h1>XMRpos Admin API Test Console</h1>
+<p class="muted">All requests are proxied to <code>xmr1.twed.org:8080</code>.</p>
+
+<div class="wrap">
+
+  <!-- Admin login -->
+  <div class="card">
+    <h2>Admin Login</h2>
+    <div class="grid2">
+      <div>
+        <label>Username</label>
+        <input id="a-name" placeholder="admin" />
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="a-pass" type="password" placeholder="password" />
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btn-a-login">Login</button>
+    </div>
+    <pre id="out-a-auth"></pre>
+  </div>
+
+  <!-- Tokens -->
+  <div class="card">
+    <h2>Stored Admin Tokens</h2>
+    <pre id="out-a-tokens" class="muted">No admin tokens yet.</pre>
+  </div>
+
+  <!-- Balance -->
+  <div class="card">
+    <h2>Wallet Balance</h2>
+    <button id="btn-a-balance">Fetch Balance</button>
+    <pre id="out-a-balance" class="muted"></pre>
+  </div>
+
+  <!-- Vendors -->
+  <div class="card">
+    <h2>List Vendors</h2>
+    <button id="btn-a-vendors">Fetch Vendors</button>
+    <pre id="out-a-vendors" class="muted"></pre>
+  </div>
+
+  <!-- Create invite -->
+  <div class="card">
+    <h2>Create Invite</h2>
+    <div class="grid2">
+      <div>
+        <label>Valid Until (Unix seconds)</label>
+        <input id="invite-valid-until" type="number" placeholder="e.g. 1792504734" />
+      </div>
+      <div>
+        <label>Forced Vendor Name (optional)</label>
+        <input id="invite-forced-name" placeholder="vendor name or leave blank" />
+      </div>
+    </div>
+    <button id="btn-a-invite">Create Invite</button>
+    <pre id="out-a-invite" class="muted"></pre>
+  </div>
+
+  <!-- Transfer -->
+  <div class="card">
+    <h2>Transfer To Vendor</h2>
+    <label>Vendor ID</label>
+    <input id="transfer-vendor-id" type="number" min="1" placeholder="1" />
+    <div class="actions">
+      <button id="btn-a-transfer">Initiate Transfer</button>
+    </div>
+    <pre id="out-a-transfer" class="muted"></pre>
+  </div>
+
+</div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const pretty = (v)=> typeof v === "string" ? v : JSON.stringify(v, null, 2);
+const showError = (id, err)=>{
+  $(id).textContent = err?.message || String(err);
+  $(id).classList.remove("muted");
+  $(id).classList.add("err");
+};
+
+let admin = { access:null, refresh:null, tokenType:"Bearer" };
+
+const tokensOut = $("out-a-tokens");
+const updateTokensDisplay = ()=>{
+  if (!admin.access && !admin.refresh) {
+    tokensOut.textContent = "No admin tokens yet.";
+    tokensOut.classList.add("muted");
+    return;
+  }
+  tokensOut.textContent = pretty({
+    token_type: admin.tokenType,
+    access_token: admin.access,
+    refresh_token: admin.refresh
+  });
+  tokensOut.classList.remove("muted", "err");
+};
+
+const authHeaders = ()=>{
+  if (!admin.access) return {};
+  return { Authorization: `${admin.tokenType} ${admin.access}` };
+};
+
+$("btn-a-login").onclick = async ()=>{
+  const body = {
+    name: $("a-name").value.trim(),
+    password: $("a-pass").value.trim()
+  };
+  const outId = "out-a-auth";
+  $(outId).classList.remove("err");
+  try {
+    const r = await fetch("/auth/login-admin", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json().catch(()=> ({}));
+    admin.access = data.access_token || null;
+    admin.refresh = data.refresh_token || null;
+    admin.tokenType = data.token_type ? String(data.token_type) : admin.tokenType;
+    $(outId).textContent = `Status ${r.status}\n${pretty(data)}`;
+    updateTokensDisplay();
+  } catch (err) {
+    showError(outId, err);
+  }
+};
+
+$("btn-a-balance").onclick = async ()=>{
+  const outId = "out-a-balance";
+  $(outId).classList.remove("err");
+  if (!admin.access) {
+    $(outId).textContent = "Admin access token not set. Login first.";
+    $(outId).classList.remove("muted");
+    $(outId).classList.add("err");
+    return;
+  }
+  try {
+    const r = await fetch("/admin/balance", { headers: authHeaders() });
+    const data = await r.json().catch(()=> ({}));
+    $(outId).textContent = `Status ${r.status}\n${pretty(data)}`;
+    $(outId).classList.remove("muted");
+    if (!r.ok) $(outId).classList.add("err");
+  } catch (err) {
+    showError(outId, err);
+  }
+};
+
+$("btn-a-vendors").onclick = async ()=>{
+  const outId = "out-a-vendors";
+  $(outId).classList.remove("err");
+  if (!admin.access) {
+    $(outId).textContent = "Admin access token not set. Login first.";
+    $(outId).classList.remove("muted");
+    $(outId).classList.add("err");
+    return;
+  }
+  try {
+    const r = await fetch("/admin/vendors", { headers: authHeaders() });
+    const data = await r.json().catch(()=> ({}));
+    $(outId).textContent = `Status ${r.status}\n${pretty(data)}`;
+    $(outId).classList.remove("muted");
+    if (!r.ok) $(outId).classList.add("err");
+  } catch (err) {
+    showError(outId, err);
+  }
+};
+
+$("btn-a-invite").onclick = async ()=>{
+  const outId = "out-a-invite";
+  $(outId).classList.remove("err");
+  if (!admin.access) {
+    $(outId).textContent = "Admin access token not set. Login first.";
+    $(outId).classList.remove("muted");
+    $(outId).classList.add("err");
+    return;
+  }
+  const validUntilRaw = $("invite-valid-until").value.trim();
+  const validUntil = validUntilRaw ? Number(validUntilRaw) : null;
+  if (validUntilRaw && (!Number.isFinite(validUntil) || validUntil <= 0)) {
+    $(outId).textContent = "Provide a valid positive Unix timestamp (seconds).";
+    $(outId).classList.remove("muted");
+    $(outId).classList.add("err");
+    return;
+  }
+  const body = {
+    valid_until: validUntil,
+    forced_name: $("invite-forced-name").value.trim() || null
+  };
+  try {
+    const r = await fetch("/admin/invite", {
+      method:"POST",
+      headers: Object.assign({ "Content-Type":"application/json" }, authHeaders()),
+      body: JSON.stringify(body)
+    });
+    const data = await r.json().catch(()=> ({}));
+    $(outId).textContent = `Status ${r.status}\n${pretty(data)}`;
+    $(outId).classList.remove("muted");
+    if (!r.ok) $(outId).classList.add("err");
+  } catch (err) {
+    showError(outId, err);
+  }
+};
+
+$("btn-a-transfer").onclick = async ()=>{
+  const outId = "out-a-transfer";
+  $(outId).classList.remove("err");
+  if (!admin.access) {
+    $(outId).textContent = "Admin access token not set. Login first.";
+    $(outId).classList.remove("muted");
+    $(outId).classList.add("err");
+    return;
+  }
+  const vendorId = Number($("transfer-vendor-id").value);
+  if (!Number.isInteger(vendorId) || vendorId <= 0) {
+    $(outId).textContent = "Vendor id must be a positive integer.";
+    $(outId).classList.remove("muted");
+    $(outId).classList.add("err");
+    return;
+  }
+  try {
+    const r = await fetch("/admin/transfer-balance", {
+      method:"POST",
+      headers: Object.assign({ "Content-Type":"application/json" }, authHeaders()),
+      body: JSON.stringify({ vendor_id: vendorId })
+    });
+    const ct = r.headers.get("content-type") || "";
+    if (ct.includes("json")) {
+      const data = await r.json().catch(()=> ({}));
+      $(outId).textContent = `Status ${r.status}\n${pretty(data)}`;
+    } else {
+      const bodyText = await r.text().catch(()=> "");
+      $(outId).textContent = `Status ${r.status}\n${bodyText || "(empty response)"}`;
+    }
+    $(outId).classList.remove("muted");
+    if (!r.ok) $(outId).classList.add("err");
+  } catch (err) {
+    showError(outId, err);
+  }
+};
+
+const inviteValidInput = $("invite-valid-until");
+if (inviteValidInput && !inviteValidInput.value) {
+  const defaultExpiry = Math.floor(Date.now() / 1000) + 86400;
+  inviteValidInput.value = defaultExpiry;
+}
+
+updateTokensDisplay();
+
+</script>
+</body>
+</html>
