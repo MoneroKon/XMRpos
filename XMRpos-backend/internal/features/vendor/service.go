@@ -336,7 +336,7 @@ func (s *VendorService) CreateVendor(ctx context.Context, name string, password 
 	}
 
 	if nameTaken {
-		return 0, models.NewHTTPError(http.StatusBadRequest, "vendor name already taken")
+		return 0, models.NewHTTPError(http.StatusBadRequest, "Vendor username already taken. Please choose a different name")
 	}
 
 	invite, err := s.repo.FindInviteByCode(ctx, inviteCode)

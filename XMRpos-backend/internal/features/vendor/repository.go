@@ -40,7 +40,9 @@ func (r *vendorRepository) VendorByNameExists(ctx context.Context, name string) 
 		ctx = context.Background()
 	}
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&models.Vendor{}).Where("name = ?", name).Count(&count).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&models.Vendor{}).
+		Where("name = ? AND deleted_at IS NULL", name).
+		Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
@@ -109,7 +111,7 @@ func (r *vendorRepository) PosByNameExistsForVendor(ctx context.Context, name st
 	}
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&models.Pos{}).
-		Where("name = ? AND vendor_id = ?", name, vendorID).
+		Where("name = ? AND vendor_id = ? AND deleted_at IS NULL", name, vendorID).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
