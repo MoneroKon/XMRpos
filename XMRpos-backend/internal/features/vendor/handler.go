@@ -48,7 +48,13 @@ func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 	id, httpErr := h.service.CreateVendor(ctx, req.Name, req.Password, req.InviteCode, req.MoneroSubaddress)
 
 	if httpErr != nil {
-		http.Error(w, httpErr.Message, httpErr.Code)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(httpErr.Code)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success": false,
+			"message": httpErr.Message,
+		})
+		io.Copy(io.Discard, r.Body)
 		return
 	}
 
