@@ -14,12 +14,15 @@ import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.ui.common.composables.CustomAlertDialog
 
@@ -96,9 +99,9 @@ fun PaymentEntryScreen(
             ) {
 
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 32.dp))
-                Spacer(modifier = Modifier.height(8.dp))
                 PaymentValue(value = paymentValue, currency = primaryFiatCurrency)
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 32.dp))
                 Spacer(modifier = Modifier.height(8.dp))
                 Box (
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -202,15 +205,28 @@ fun PaymentValue(value: String, currency: String) {
     Surface(
         shape = MaterialTheme.shapes.medium,
         tonalElevation = 32.dp,
-        modifier = Modifier.padding(16.dp).fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 180.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp)
-
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = currency, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = value, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = currency,
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(end = 16.dp)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 36.sp),
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
