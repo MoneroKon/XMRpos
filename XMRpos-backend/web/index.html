@@ -137,6 +137,14 @@
     <pre id="out-pos-tx" class="muted"></pre>
   </div>
 
+  <!-- POS: export transactions -->
+  <div class="card">
+    <h2>Export Transactions</h2>
+    <p class="muted">Export confirmed transactions as CSV</p>
+    <button id="btn-pos-export">Export</button>
+    <pre id="out-pos-export" class="muted"></pre>
+  </div>
+
 </div>
 
 <script>
@@ -152,6 +160,7 @@ const txIdInput = $("tx-id");
 const btnPosTx = $("btn-pos-tx");
 const outPosTx = $("out-pos-tx");
 const outPosCreateTx = $("out-pos-create-tx");
+const outPosExport = $("out-pos-export");
 const txAmountInput = $("tx-amount");
 const txDescInput = $("tx-desc");
 const updateTxLabel = ()=>{
@@ -335,6 +344,34 @@ $("btn-pos-create-tx").onclick = async ()=>{
     outPosCreateTx.classList.remove("muted");
     outPosCreateTx.classList.add("err");
     showError("out-pos-create-tx", err);
+  }
+};
+
+$("btn-pos-export").onclick = async ()=>{
+  if (!pos.access) {
+    outPosExport.textContent = "POS access token not set. Login POS first.";
+    outPosExport.classList.remove("muted", "ok");
+    outPosExport.classList.add("err");
+    return;
+  }
+  try {
+    const r = await fetch("/pos/export", {
+      headers: { Authorization: `${pos.tokenType} ${pos.access}` }
+    });
+    const data = await r.json().catch(()=> ({}));
+    outPosExport.textContent = `Status ${r.status}\n${pretty(data)}`;
+    outPosExport.classList.remove("err", "ok");
+    if (!r.ok) {
+      outPosExport.classList.remove("muted");
+      outPosExport.classList.add("err");
+    } else {
+      outPosExport.classList.remove("muted");
+      outPosExport.classList.add("ok");
+    }
+  } catch (err) {
+    outPosExport.classList.remove("muted", "ok");
+    outPosExport.classList.add("err");
+    showError("out-pos-export", err);
   }
 };
 
