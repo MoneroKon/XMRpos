@@ -22,6 +22,9 @@ import RECEIPT_FOOTER
 import REFERENCE_FIAT_CURRENCIES
 import REQUIRE_PIN_CODE_ON_APP_START
 import REQUIRE_PIN_CODE_OPEN_SETTINGS
+import EXCHANGE_RATES_CACHE
+import EXCHANGE_RATES_LAST_UPDATED
+import PRIMARY_EXCHANGE_RATE_LAST_UPDATED
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import dataStore
@@ -108,6 +111,49 @@ class DataStoreLocalDataSource @Inject constructor(
             joinedList.add(primary)
             joinedList.addAll(reference)
             joinedList
+        }
+    }
+
+    fun getCachedExchangeRates(): Flow<Map<String, Double>> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[EXCHANGE_RATES_CACHE]?.toExchangeRateMap() ?: emptyMap()
+            }
+    }
+
+    suspend fun saveCachedExchangeRates(rates: Map<String, Double>) {
+        context.dataStore.edit { preferences ->
+            if (rates.isEmpty()) {
+                preferences.remove(EXCHANGE_RATES_CACHE)
+            } else {
+                preferences[EXCHANGE_RATES_CACHE] = rates.toPersistedString()
+            }
+        }
+    }
+
+    fun getExchangeRatesLastUpdated(): Flow<Long> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[EXCHANGE_RATES_LAST_UPDATED] ?: 0L
+            }
+    }
+
+    suspend fun saveExchangeRatesLastUpdated(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[EXCHANGE_RATES_LAST_UPDATED] = timestamp
+        }
+    }
+
+    fun getPrimaryExchangeRateLastUpdated(): Flow<Long> {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[PRIMARY_EXCHANGE_RATE_LAST_UPDATED] ?: 0L
+            }
+    }
+
+    suspend fun savePrimaryExchangeRateLastUpdated(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PRIMARY_EXCHANGE_RATE_LAST_UPDATED] = timestamp
         }
     }
 
@@ -338,4 +384,20 @@ class DataStoreLocalDataSource @Inject constructor(
         }
     }
 
+}
+
+private fun Map<String, Double>.toPersistedString(): String {
+    return entries.joinToString(",") { "${it.key}:${it.value}" }
+}
+
+private fun String.toExchangeRateMap(): Map<String, Double> {
+    if (isBlank()) return emptyMap()
+    return split(",")
+        .mapNotNull { entry ->
+            val parts = entry.split(":")
+            if (parts.size != 2) return@mapNotNull null
+            val value = parts[1].toDoubleOrNull() ?: return@mapNotNull null
+            parts[0] to value
+        }
+        .toMap()
 }

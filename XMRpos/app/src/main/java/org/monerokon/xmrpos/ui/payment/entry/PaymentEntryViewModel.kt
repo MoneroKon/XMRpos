@@ -30,15 +30,16 @@ class PaymentEntryViewModel @Inject constructor(
         this.navController = navController
     }
 
-    var primaryFiatCurrency by mutableStateOf("");
-    var paymentValue by mutableStateOf("0");
-    var exchangeRate: Double? by mutableStateOf(null);
+    var primaryFiatCurrency by mutableStateOf("")
+    var paymentValue by mutableStateOf("0")
+    var exchangeRate: Double? by mutableStateOf(null)
 
     var openSettingsPinCodeDialog by mutableStateOf(false)
     var requirePinCodeOpenSettings by mutableStateOf(true)
     var pinCodeOpenSettings by mutableStateOf("`")
 
     var errorMessage by mutableStateOf("")
+    private var isFetchingExchangeRate = false
 
     init {
         fetchExchangeRate()
@@ -56,24 +57,35 @@ class PaymentEntryViewModel @Inject constructor(
     }
 
     fun fetchExchangeRate() {
+        if (isFetchingExchangeRate) return
         viewModelScope.launch {
-            val primaryFiatCurrencyResponse = exchangeRateRepository.getPrimaryFiatCurrency().first()
-            primaryFiatCurrency = primaryFiatCurrencyResponse
+            isFetchingExchangeRate = true
+            try {
+                val primaryFiatCurrencyResponse = exchangeRateRepository.getPrimaryFiatCurrency().first()
+                primaryFiatCurrency = primaryFiatCurrencyResponse
 
-            val exchangeRateResponse = exchangeRateRepository.fetchPrimaryExchangeRate().first()
-
-            if (exchangeRateResponse is DataResult.Failure) {
-                errorMessage = exchangeRateResponse.message
-            } else if (exchangeRateResponse is DataResult.Success) {
-                // get value of first key from ExchangeRateResponse (Map<String, Double>)
-                exchangeRate = exchangeRateResponse.data.entries.first().value
+                when (val exchangeRateResponse = exchangeRateRepository.fetchPrimaryExchangeRate().first()) {
+                    is DataResult.Failure -> {
+                        errorMessage = exchangeRateResponse.message
+                    }
+                    is DataResult.Success -> {
+                        val rate = exchangeRateResponse.data.values.firstOrNull()
+                        if (rate != null) {
+                            exchangeRate = rate
+                            errorMessage = ""
+                        } else {
+                            errorMessage = "Missing exchange rate"
+                        }
+                    }
+                }
+            } finally {
+                isFetchingExchangeRate = false
             }
         }
     }
 
 
     fun addDigit(digit: String) {
-        fetchExchangeRate()
         // Rules to prevent invalid input
         if (paymentValue.length >= 16) {
             return
