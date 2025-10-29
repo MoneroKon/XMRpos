@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.monerokon.xmrpos.data.remote.backend.model.BackendConfirmedTransaction
@@ -191,25 +192,27 @@ private fun EmptyStateMessage(message: String) {
 
 @Composable
 private fun PendingTransactionsTable(transactions: List<BackendPendingTransaction>) {
+    val backgroundColor = Color(0xFFFFB86C)
+    val contentColor = Color(0xFF282A36)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(backgroundColor)
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            TableHeaderCell("ID", weight = 1.5f)
-            TableHeaderCell("Amount (XMR)", weight = 2f)
-            TableHeaderCell("Accepted", weight = 1f)
-            TableHeaderCell("Confirmed", weight = 1f)
+            TableHeaderCell("ID", weight = 1.5f, textColor = contentColor)
+            TableHeaderCell("Amount (XMR)", weight = 2f, textColor = contentColor)
+            TableHeaderCell("Accepted", weight = 1f, textColor = contentColor)
+            TableHeaderCell("Confirmed", weight = 1f, textColor = contentColor)
         }
         transactions.forEach { transaction ->
             Row(modifier = Modifier.fillMaxWidth()) {
-                TableCell(transaction.id.toString(), weight = 1.5f)
-                TableCell(formatAtomicAmount(transaction.amount), weight = 2f)
-                TableCell(transaction.accepted.toYesNo(), weight = 1f)
-                TableCell(transaction.confirmed.toYesNo(), weight = 1f)
+                TableCell(transaction.id.toString(), weight = 1.5f, textColor = contentColor)
+                TableCell(formatAtomicAmount(transaction.amount), weight = 2f, textColor = contentColor)
+                TableCell(transaction.accepted.toYesNo(), weight = 1f, textColor = contentColor)
+                TableCell(transaction.confirmed.toYesNo(), weight = 1f, textColor = contentColor)
             }
         }
     }
@@ -248,10 +251,11 @@ private fun ConfirmedTransactionRow(transaction: BackendConfirmedTransaction) {
 }
 
 @Composable
-private fun RowScope.TableHeaderCell(text: String, weight: Float) {
+private fun RowScope.TableHeaderCell(text: String, weight: Float, textColor: Color = MaterialTheme.colorScheme.onSurface) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+        color = textColor,
         modifier = Modifier
             .weight(weight)
             .padding(end = 8.dp),
@@ -264,6 +268,7 @@ private fun RowScope.TableCell(
     weight: Float,
     bold: Boolean = false,
     maxLines: Int = Int.MAX_VALUE,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Text(
         text = text,
@@ -272,6 +277,7 @@ private fun RowScope.TableCell(
         } else {
             MaterialTheme.typography.bodyMedium
         },
+        color = textColor,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier

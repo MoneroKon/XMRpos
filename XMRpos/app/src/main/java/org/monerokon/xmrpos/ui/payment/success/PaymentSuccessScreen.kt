@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.ui.PaymentSuccess
@@ -61,7 +63,7 @@ fun PaymentSuccessScreen(
                     modifier = Modifier
                         .size(190.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(Color(0xFF4CAF50))
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -107,7 +109,9 @@ fun PaymentSuccessScreen(
             }
             Spacer(modifier = Modifier.height(32.dp))
             ElevatedButton(
-                onClick = {navigateToEntry()}
+                onClick = {navigateToEntry()},
+                modifier = Modifier.scale(2f),
+                colors = ButtonDefaults.elevatedButtonColors(containerColor = Color(0xFFFF9800))
             ) {
                 Text("Next order")
             }
