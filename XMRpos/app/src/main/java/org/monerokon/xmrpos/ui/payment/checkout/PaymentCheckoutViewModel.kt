@@ -12,8 +12,10 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionRequest
 import org.monerokon.xmrpos.data.repository.BackendRepository
 import org.monerokon.xmrpos.data.repository.DataStoreRepository
@@ -24,9 +26,7 @@ import org.monerokon.xmrpos.ui.PaymentEntry
 import org.monerokon.xmrpos.ui.PaymentSuccess
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.net.NetworkInterface
 import java.util.Hashtable
-import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.pow
 
@@ -41,6 +41,8 @@ class PaymentCheckoutViewModel @Inject constructor(
     private val logTag = "PaymentCheckoutViewModel"
 
     private var navController: NavHostController? = null
+    private var isFetchingExchangeRates = false
+    private var createTransactionJob: Job? = null
 
     fun setNavController(navController: NavHostController) {
         this.navController = navController
@@ -68,78 +70,99 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     fun updatePaymentValue(value: Double) {
         paymentValue = value
+        recalculateTargetAmount()
     }
 
     fun updatePrimaryFiatCurrency(value: String) {
         primaryFiatCurrency = value
+        recalculateTargetAmount()
     }
 
     private fun fetchExchangeRates() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val primaryFiatCurrencyResponse = exchangeRateRepository.getPrimaryFiatCurrency().first()
-            primaryFiatCurrency = primaryFiatCurrencyResponse
+        if (isFetchingExchangeRates) return
+        viewModelScope.launch {
+            isFetchingExchangeRates = true
+            try {
+                val primaryFiatCurrencyResponse = exchangeRateRepository.getPrimaryFiatCurrency().first()
+                primaryFiatCurrency = primaryFiatCurrencyResponse
 
-            val referenceFiatCurrenciesResponse = exchangeRateRepository.getReferenceFiatCurrencies().first()
-            referenceFiatCurrencies = referenceFiatCurrenciesResponse
+                val referenceFiatCurrenciesResponse = exchangeRateRepository.getReferenceFiatCurrencies().first()
+                referenceFiatCurrencies = referenceFiatCurrenciesResponse
 
-            val exchangeRatesResponse = exchangeRateRepository.fetchExchangeRates().first()
-
-            if (exchangeRatesResponse is DataResult.Failure) {
-                errorMessage = exchangeRatesResponse.message
-            } else if (exchangeRatesResponse is DataResult.Success) {
-                exchangeRates = exchangeRatesResponse.data
+                when (val exchangeRatesResponse = exchangeRateRepository.fetchExchangeRates().first()) {
+                    is DataResult.Failure -> {
+                        errorMessage = exchangeRatesResponse.message
+                        exchangeRates = null
+                        targetXMRvalue = BigDecimal.ZERO
+                    }
+                    is DataResult.Success -> {
+                        exchangeRates = exchangeRatesResponse.data
+                        errorMessage = ""
+                        recalculateTargetAmount()
+                        Log.i(logTag, "Reference exchange rates: $referenceFiatCurrencies")
+                        Log.i(logTag, "Exchange rates: $exchangeRates")
+                        startPayReceive()
+                    }
+                }
+            } finally {
+                isFetchingExchangeRates = false
             }
-
-            val rate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0
-            targetXMRvalue = if (rate != 0.0) {
-                BigDecimal.valueOf(paymentValue)
-                    .divide(BigDecimal.valueOf(rate), 12, RoundingMode.UP)
-            } else {
-                BigDecimal.ZERO
-            }
-
-            Log.i(logTag, "Reference exchange rates: $referenceFiatCurrencies")
-            Log.i(logTag, "Exchange rates: $exchangeRates")
-
-            startPayReceive()
         }
     }
 
     private fun startPayReceive() {
-
-        viewModelScope.launch(Dispatchers.IO) {
+        if (targetXMRvalue.compareTo(BigDecimal.ZERO) <= 0) return
+        createTransactionJob?.cancel()
+        createTransactionJob = null
+        createTransactionJob = viewModelScope.launch {
             val atomicAmount = targetXMRvalue
                 .setScale(12, RoundingMode.UP)
                 .movePointRight(12)
                 .longValueExact()
 
+            val requiredConfirmations = dataStoreRepository.getBackendConfValue().first().split("-")[0].toInt()
             val backendCreateTransactionRequest = BackendCreateTransactionRequest(
                 atomicAmount,
                 "XMRpos",
                 paymentValue,
                 primaryFiatCurrency,
-                dataStoreRepository.getBackendConfValue().first().split("-")[0].toInt()
+                requiredConfirmations
             )
-            /*moneroPayRepository.updateCurrentCallback(callbackUUID, paymentValue);*/
-            val response = backendRepository.createTransaction(backendCreateTransactionRequest)
+
+            val response = withContext(Dispatchers.IO) {
+                backendRepository.createTransaction(backendCreateTransactionRequest)
+            }
 
             Log.i(logTag, "MoneroPay: $response")
 
-            if (response is DataResult.Failure) {
-                errorMessage = response.message
-                stopReceive()
-            } else if (response is DataResult.Success) {
+            when (response) {
+                is DataResult.Failure -> {
+                    errorMessage = response.message
+                    hceRepository.updateUri("")
+                    backendRepository.stopObservingTransactionUpdates()
+                }
+                is DataResult.Success -> {
+                    address = response.data.address
+                    val formattedAmount = targetXMRvalue
+                        .setScale(12, RoundingMode.UP)
+                        .toPlainString()
+                    qrCodeUri = "monero:${response.data.address}?tx_amount=$formattedAmount&tx_description=XMRpos"
 
-                address = response.data.address
-                val formattedAmount = targetXMRvalue
-                    .setScale(12, RoundingMode.UP)
-                    .toPlainString()
-                qrCodeUri = "monero:${response.data.address}?tx_amount=$formattedAmount&tx_description=XMRpos"
-
-                backendRepository.observeCurrentTransactionUpdates(response.data.id)
-
-                hceRepository.updateUri(qrCodeUri)
+                    backendRepository.observeCurrentTransactionUpdates(response.data.id)
+                    hceRepository.updateUri(qrCodeUri)
+                }
             }
+            createTransactionJob = null
+        }
+    }
+
+    private fun recalculateTargetAmount() {
+        val rate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0
+        targetXMRvalue = if (rate > 0.0) {
+            BigDecimal.valueOf(paymentValue)
+                .divide(BigDecimal.valueOf(rate), 12, RoundingMode.UP)
+        } else {
+            BigDecimal.ZERO
         }
     }
 
@@ -149,7 +172,7 @@ class PaymentCheckoutViewModel @Inject constructor(
                 if (it != null) {
                     if (it.id == backendRepository.currentTransactionId)
                     if (it.accepted) {
-                        backendRepository.currentTransactionId = null;
+                        backendRepository.currentTransactionId = null
                         navigateToPaymentSuccess(PaymentSuccess(
                             fiatAmount = paymentValue,
                             primaryFiatCurrency = primaryFiatCurrency,
@@ -187,6 +210,8 @@ class PaymentCheckoutViewModel @Inject constructor(
     fun stopReceive() {
         hceRepository.updateUri("")
         backendRepository.stopObservingTransactionUpdates()
+        createTransactionJob?.cancel()
+        createTransactionJob = null
     }
 
     fun resetErrorMessage() {
