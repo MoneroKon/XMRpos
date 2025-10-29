@@ -2,6 +2,8 @@ package pos
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -16,6 +18,10 @@ type PosService struct {
 	config    *config.Config
 	moneroPay *moneropay.MoneroPayAPIClient
 }
+
+const moneroAtomicUnitsPerXMR int64 = 1_000_000_000_000
+
+var ErrNoConfirmedTransactions = errors.New("no confirmed transactions in DB")
 
 func NewPosService(repo PosRepository, cfg *config.Config, moneroPay *moneropay.MoneroPayAPIClient) *PosService {
 	return &PosService{repo: repo, config: cfg, moneroPay: moneroPay}
@@ -175,4 +181,66 @@ func (s *PosService) ListTransactionsByPos(ctx context.Context, vendorID uint, p
 	}
 
 	return result, nil
+}
+
+func (s *PosService) ExportConfirmedTransactionsCSV(ctx context.Context, vendorID uint, posID uint) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	transactions, err := s.repo.FindTransactionsByPosID(ctx, vendorID, posID)
+	if err != nil {
+		return "", err
+	}
+
+	var builder strings.Builder
+	builder.WriteString("Koinly Date,Amount,Currency,Label,TxHash")
+
+	rows := 0
+	for _, transaction := range transactions {
+		if !transaction.Confirmed {
+			continue
+		}
+
+		for _, sub := range transaction.SubTransactions {
+			builder.WriteByte('\n')
+			builder.WriteString(formatExportRow(sub))
+			rows++
+		}
+	}
+
+	if rows == 0 {
+		return "", ErrNoConfirmedTransactions
+	}
+
+	return builder.String(), nil
+}
+
+func formatExportRow(sub *models.SubTransaction) string {
+	date := sub.Timestamp.UTC()
+	dateStr := fmt.Sprintf("%04d-%02d-%02d 00:00 UTC", date.Year(), date.Month(), date.Day())
+	amount := formatAtomicAmountTwoDecimals(sub.Amount)
+
+	return fmt.Sprintf("%s,%s,XMR,income,%s", dateStr, amount, sub.TxHash)
+}
+
+func formatAtomicAmountTwoDecimals(amount int64) string {
+	integer := amount / moneroAtomicUnitsPerXMR
+	remainder := amount % moneroAtomicUnitsPerXMR
+
+	if remainder < 0 {
+		remainder += moneroAtomicUnitsPerXMR
+		integer--
+	}
+
+	centsDivisor := moneroAtomicUnitsPerXMR / 100
+	roundingOffset := centsDivisor / 2
+
+	decimals := (remainder + roundingOffset) / centsDivisor
+	if decimals == 100 {
+		integer++
+		decimals = 0
+	}
+
+	return fmt.Sprintf("%d.%02d", integer, decimals)
 }

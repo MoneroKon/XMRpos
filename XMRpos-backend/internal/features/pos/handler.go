@@ -3,6 +3,7 @@ package pos
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -37,6 +38,10 @@ type createTransactionResponse struct {
 type listTransactionsResponse struct {
 	ConfirmedTransactions []ConfirmedTransactionSummary `json:"confirmed_transactions"`
 	PendingTransactions   []PendingTransactionSummary   `json:"pending_transactions"`
+}
+
+type exportTransactionsResponse struct {
+	CSVData string `json:"csv_data"`
 }
 
 func (h *PosHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -149,4 +154,39 @@ func (h *PosHandler) ListTransactions(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *PosHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "pos" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vendorIDPtr, _ := r.Context().Value(models.ClaimsVendorIDKey).(*uint)
+	posIDPtr, _ := r.Context().Value(models.ClaimsPosIDKey).(*uint)
+	if vendorIDPtr == nil || posIDPtr == nil {
+		http.Error(w, "Vendor ID and POS ID are required", http.StatusBadRequest)
+		return
+	}
+
+	csvData, err := h.service.ExportConfirmedTransactionsCSV(ctx, *vendorIDPtr, *posIDPtr)
+	if err != nil {
+		if errors.Is(err, ErrNoConfirmedTransactions) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		http.Error(w, "Failed to export transactions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	resp := exportTransactionsResponse{CSVData: csvData}
+	_ = json.NewEncoder(w).Encode(resp)
 }
