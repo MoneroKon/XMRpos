@@ -27,8 +27,10 @@ import java.math.BigDecimal
 @Composable
 fun PaymentCheckoutScreenRoot(viewModel: PaymentCheckoutViewModel, navController: NavHostController, fiatAmount: Double, primaryFiatCurrency: String) {
     viewModel.setNavController(navController)
-    viewModel.updatePaymentValue(fiatAmount)
-    viewModel.updatePrimaryFiatCurrency(primaryFiatCurrency)
+    LaunchedEffect(fiatAmount, primaryFiatCurrency) {
+        viewModel.updatePaymentValue(fiatAmount)
+        viewModel.updatePrimaryFiatCurrency(primaryFiatCurrency)
+    }
     PaymentCheckoutScreen(
         paymentValue = fiatAmount,
         primaryFiatCurrency = primaryFiatCurrency,

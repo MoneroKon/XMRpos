@@ -13,8 +13,8 @@ import org.monerokon.xmrpos.shared.DataResult
 import javax.inject.Inject
 import kotlin.math.abs
 
-private const val PRIMARY_REFRESH_INTERVAL_MS = 60_000L      // 1 minute
-private const val FULL_REFRESH_INTERVAL_MS = 1_800_000L      // 30 minutes
+private const val PRIMARY_REFRESH_INTERVAL_MS = 600_000L     // 10 minutes
+private const val FULL_REFRESH_INTERVAL_MS = 3_600_000L      // 60 minutes
 
 class ExchangeRateRepository @Inject constructor(
     private val exchangeRateRemoteDataSource: ExchangeRateRemoteDataSource,

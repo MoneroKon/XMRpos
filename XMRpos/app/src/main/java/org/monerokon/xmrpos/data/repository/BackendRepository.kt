@@ -88,6 +88,8 @@ class BackendRepository @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 Log.i(logTag, "[WS] Observation for ID $transactionId was cancelled.")
+            } catch (e: Exception) {
+                Log.e(logTag, "[WS] Observation failed for ID $transactionId", e)
             }
         }
 
