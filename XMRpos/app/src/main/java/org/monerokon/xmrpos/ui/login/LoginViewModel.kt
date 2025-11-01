@@ -31,11 +31,11 @@ class LoginViewModel @Inject constructor(
         this.navController = navController
     }
 
-    var instanceUrl by mutableStateOf("http://xmr1.twed.org:8080")
+    var instanceUrl by mutableStateOf("")
 
-    var vendorID by mutableStateOf("1")
+    var vendorID by mutableStateOf("")
 
-    var username by mutableStateOf("pos1")
+    var username by mutableStateOf("")
 
     var password by mutableStateOf("")
 
