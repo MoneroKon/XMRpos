@@ -101,7 +101,6 @@ class PaymentCheckoutViewModel @Inject constructor(
                         recalculateTargetAmount()
                         Log.i(logTag, "Reference exchange rates: $referenceFiatCurrencies")
                         Log.i(logTag, "Exchange rates: $exchangeRates")
-                        startPayReceive()
                     }
                 }
             } finally {
@@ -111,12 +110,13 @@ class PaymentCheckoutViewModel @Inject constructor(
     }
 
     private fun startPayReceive() {
-        if (targetXMRvalue.compareTo(BigDecimal.ZERO) <= 0) return
+        val xmrAmount = targetXMRvalue
+        if (xmrAmount.compareTo(BigDecimal.ZERO) <= 0) return
         createTransactionJob?.cancel()
         createTransactionJob = null
         createTransactionJob = viewModelScope.launch {
-            val atomicAmount = targetXMRvalue
-                .setScale(12, RoundingMode.UP)
+            val normalizedAmount = xmrAmount.setScale(12, RoundingMode.UP)
+            val atomicAmount = normalizedAmount
                 .movePointRight(12)
                 .longValueExact()
 
@@ -143,9 +143,7 @@ class PaymentCheckoutViewModel @Inject constructor(
                 }
                 is DataResult.Success -> {
                     address = response.data.address
-                    val formattedAmount = targetXMRvalue
-                        .setScale(12, RoundingMode.UP)
-                        .toPlainString()
+                    val formattedAmount = normalizedAmount.toPlainString()
                     qrCodeUri = "monero:${response.data.address}?tx_amount=$formattedAmount&tx_description=XMRpos"
 
                     backendRepository.observeCurrentTransactionUpdates(response.data.id)
@@ -163,6 +161,17 @@ class PaymentCheckoutViewModel @Inject constructor(
                 .divide(BigDecimal.valueOf(rate), 12, RoundingMode.UP)
         } else {
             BigDecimal.ZERO
+        }
+        maybeStartPayReceive()
+    }
+
+    private fun maybeStartPayReceive() {
+        if (targetXMRvalue.compareTo(BigDecimal.ZERO) > 0 &&
+            exchangeRates != null &&
+            createTransactionJob == null &&
+            qrCodeUri.isEmpty()
+        ) {
+            startPayReceive()
         }
     }
 
